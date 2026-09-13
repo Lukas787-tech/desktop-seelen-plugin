@@ -1,0 +1,121 @@
+/*
+ * The workspace overview.
+ *
+ * Like the power menu this covers the display, but unlike it there is already
+ * a blurred wallpaper behind the cards - drawn by this same widget, in this
+ * same document, which makes it one of the few places in the theme where a
+ * backdrop-filter has something to sample. The shelf and the cards can
+ * therefore stay on the surface's own grounds; only the backdrop is darkened.
+ */
+
+.workspaces-viewer {
+  color: var(--rs-fg) !important;
+  background-color: color-mix(in oklab, var(--color-gray-50, #16161e) 60%, transparent) !important;
+  font-family: var(--rs-font) !important;
+  animation: rs-fade var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.workspaces-viewer .workspaces {
+  background-color: var(--rs-panel-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  backdrop-filter: var(--rs-backdrop) !important;
+  -webkit-backdrop-filter: var(--rs-backdrop) !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+  animation: rs-drop var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.workspaces-viewer .workspace,
+.workspaces-viewer .add-workspace-column,
+.workspaces-viewer .add-workspace-row {
+  background-color: var(--rs-chip) !important;
+  border: 1px solid transparent !important;
+  border-radius: calc(var(--rs-row-radius) + 2px) !important;
+  box-shadow: none !important;
+  transition: var(--rs-tr) !important;
+  animation: rs-tile-in var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.workspaces-viewer .workspace:nth-child(2) {
+  animation-delay: var(--rs-step) !important;
+}
+.workspaces-viewer .workspace:nth-child(3) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+.workspaces-viewer .workspace:nth-child(4) {
+  animation-delay: calc(var(--rs-step) * 3) !important;
+}
+.workspaces-viewer .workspace:nth-child(n + 5) {
+  animation-delay: calc(var(--rs-step) * 4) !important;
+}
+
+.workspaces-viewer .workspace:hover,
+.workspaces-viewer .add-workspace-column:hover,
+.workspaces-viewer .add-workspace-row:hover {
+  background-color: var(--rs-hover) !important;
+  border-color: var(--rs-divider) !important;
+}
+
+.workspaces-viewer .add-workspace-column:active,
+.workspaces-viewer .add-workspace-row:active {
+  transform: scale(0.96) !important;
+}
+
+/* The marker under the active workspace, in the same ink as a dock item's. */
+.workspaces-viewer .workspace.workspace-active::before {
+  background-color: var(--rs-mark) !important;
+  transition:
+    background-color var(--rs-dur) var(--rs-ease),
+    width var(--rs-dur) var(--rs-ease) !important;
+}
+
+.workspaces-viewer .workspace.workspace-drop-target {
+  outline-color: var(--rs-selected-edge) !important;
+}
+
+.workspaces-viewer .workspace-name-input {
+  color: var(--rs-fg) !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  border-radius: var(--rs-row-radius) !important;
+  font-size: var(--rs-text) !important;
+  font-weight: 600 !important;
+  transition: var(--rs-tr) !important;
+}
+
+.workspaces-viewer .workspace-name-input:focus {
+  background-color: var(--rs-field) !important;
+}
+
+/* A window card in the overview is the app switcher's task card. */
+.window {
+  background-color: var(--rs-chip) !important;
+  border: 1px solid transparent !important;
+  border-radius: calc(var(--rs-row-radius) + 2px) !important;
+  box-shadow: none !important;
+  transition: var(--rs-tr) !important;
+  animation: rs-tile-in var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.window:hover {
+  background-color: var(--rs-hover) !important;
+  border-color: var(--rs-divider) !important;
+  transform: translateY(-3px) !important;
+}
+
+.window.is-overlay {
+  transform: scale(1.04) !important;
+  box-shadow: var(--rs-shadow-l) !important;
+}
+
+.window .window-header {
+  border-bottom-color: var(--rs-divider) !important;
+}
+
+.window .window-title {
+  color: var(--rs-fg) !important;
+  font-size: var(--rs-text) !important;
+  font-weight: 500 !important;
+}

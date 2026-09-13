@@ -1,0 +1,91 @@
+/*
+ * The window thumbnails that open above a dock item.
+ *
+ * These are the dock's flyout, so they take the panel ground rather than the
+ * bar's - a preview sits over whatever window the pointer is near, not over
+ * the wallpaper.
+ */
+
+.weg-item-preview-container {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-panel-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+  font-family: var(--rs-font) !important;
+  font-size: var(--rs-text) !important;
+  animation: rs-rise var(--rs-dur) var(--rs-ease) both !important;
+}
+
+/*
+ * One preview is a row: quiet, filling only under the pointer. This is the one
+ * place `backdrop-filter` is real - the card sits over the container's own
+ * ground, in the same document - which is why the default theme uses it here
+ * and nowhere else.
+ */
+.weg-item-preview {
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--rs-row-radius) !important;
+  box-shadow: none !important;
+  transition: var(--rs-tr) !important;
+}
+
+.weg-item-preview:hover {
+  background-color: var(--rs-hover) !important;
+  border-color: var(--rs-divider) !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  transform: translateY(-2px) !important;
+}
+
+.weg-item-preview:active {
+  transform: scale(0.97) !important;
+  transition-duration: var(--rs-dur-fast) !important;
+}
+
+/* Previews arrive in the order they are stacked, one step apart. */
+.weg-item-preview-list > * {
+  animation: rs-tile-in var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.weg-item-preview-list > *:nth-child(2) {
+  animation-delay: var(--rs-step) !important;
+}
+.weg-item-preview-list > *:nth-child(3) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+.weg-item-preview-list > *:nth-child(4) {
+  animation-delay: calc(var(--rs-step) * 3) !important;
+}
+.weg-item-preview-list > *:nth-child(5) {
+  animation-delay: calc(var(--rs-step) * 4) !important;
+}
+.weg-item-preview-list > *:nth-child(n + 6) {
+  animation-delay: calc(var(--rs-step) * 5) !important;
+}
+
+.weg-item-preview-title {
+  color: var(--rs-fg) !important;
+  font-size: var(--rs-text) !important;
+  font-weight: 500 !important;
+}
+
+.weg-item-preview-image-container {
+  border: 1px solid var(--rs-divider) !important;
+  border-radius: calc(var(--rs-row-radius) - 2px) !important;
+}
+
+.weg-item-preview-close {
+  color: var(--rs-fg-muted) !important;
+  border-radius: 6px !important;
+  transition: var(--rs-tr) !important;
+}
+
+.weg-item-preview-close:hover {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-chip-hover) !important;
+  transform: scale(1.15) !important;
+}

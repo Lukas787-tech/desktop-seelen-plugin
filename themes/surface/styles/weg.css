@@ -1,0 +1,415 @@
+/*
+ * The dock.
+ *
+ * `!important` throughout for the reason given at the top of
+ * `fancy-toolbar.css`: a theme's CSS is layered, the widget's own is not. The
+ * ground is built the same way too - density, sheen and grain rather than a
+ * `backdrop-filter` that a layered window gives nothing to sample. See the
+ * material note in `shared/tokens.css`.
+ *
+ * The markup, from Seelen 2.8.2's own source rather than from guesses:
+ *
+ *   #root > .taskbar.<edge>[data-has-margin][data-size]
+ *     > .weg-items-container > .weg-items
+ *       > .weg-items-{left,center,right}
+ *         > .weg-item-drag-container
+ *           > .weg-item-overlay
+ *             > .weg-item[role]            menuitem for an app, button for a plugin
+ *               > figure.weg-item-icon     or canvas.weg-item-canvas
+ *             > .weg-item-open-sign, badges
+ *
+ * Two rules in earlier versions of this file were written against markup that
+ * does not exist, and silently never fired: the neighbour magnification's
+ * `.weg-item:hover + .weg-item` (every item is wrapped, so no two are ever
+ * siblings), and everything addressed to a `.weg-item-start` (there is no such
+ * class - see the start button section below).
+ */
+
+.taskbar {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-bar-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+  font-family: var(--rs-font) !important;
+  font-size: var(--rs-text) !important;
+  transition: background-color var(--rs-dur) var(--rs-ease) !important;
+}
+
+.taskbar .bg-layers,
+.taskbar .bg-layer-1,
+.taskbar .bg-layer-2,
+.taskbar .taskbar-bg-layer-1,
+.taskbar .taskbar-bg-layer-2 {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+/*
+ * A dock that shrink-wraps its items, or one with a margin, is a floating
+ * panel and takes the panel's border and corners. A full-width dock pinned to
+ * the edge takes neither, for the same reason the toolbar does not.
+ *
+ * The inner container is rounded too: it scrolls, and a square scroller inside
+ * a rounded shell shows its corners through the curve.
+ */
+.taskbar[data-has-margin='true'],
+.taskbar[data-size='min-content'] {
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+}
+
+.taskbar[data-has-margin='true'] > .weg-items-container,
+.taskbar[data-size='min-content'] > .weg-items-container {
+  border-radius: var(--rs-radius) !important;
+}
+
+.taskbar:not([data-has-margin='true']):not([data-size='min-content']) {
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+/*
+ * The dock arrives from its own edge.
+ */
+.taskbar {
+  animation: rs-rise var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+.taskbar.top {
+  animation-name: rs-drop !important;
+}
+
+/*
+ * ...and leaves by it. `hideMode: OnOverlap` does not hide the bar at all: the
+ * widget translates `#root` a dock's-height off the screen, on a fixed
+ * `0.2s ease-in-out` that is the one curve in the shell nobody chose. Only the
+ * transition is restated - the transform itself stays the host's, so the
+ * geometry cannot drift from what the host thinks is hidden. On the movement
+ * curve, so under the Spring style the dock bounces back into place.
+ */
+#root:has(> .taskbar) {
+  transition: transform var(--rs-dur-slow) var(--rs-ease-move) !important;
+}
+
+/*
+ * Dock items get the surface's *icon* treatment, not its row treatment: the
+ * launcher's icons carry no tile of their own and only take a fill when the
+ * pointer is on them. The default theme's solid tile plus drop shadow is what
+ * this replaces, which is most of the difference between the two surfaces.
+ *
+ * The corner is left to Seelen, which derives it from the configured item size
+ * - a 50px tile and a 24px one do not want the same 11px.
+ */
+.weg-item {
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  transform-origin: center bottom !important;
+  transition: var(--rs-tr) !important;
+}
+
+/*
+ * Which way "out of the bar" points, and how far. Declared once per
+ * orientation rather than repeated through every hover rule below, because the
+ * magnification needs a hovered item and two rings of neighbours, in four
+ * orientations - twelve rules that differ only in an axis is how they drift.
+ *
+ * Both amounts are the user's: `--rs-dock-lift` in pixels for the hovered
+ * item, with the neighbours following at 40% and 12% of it, and
+ * `--rs-dock-zoom` in percent, falling off the same way.
+ */
+.taskbar {
+  --rs-lift-px: calc(var(--rs-dock-lift, 5) * 1px);
+  --rs-zoom: calc(var(--rs-dock-zoom, 14) / 100);
+  --rs-lift: translateY(calc(var(--rs-lift-px) * -1));
+  --rs-lift-near: translateY(calc(var(--rs-lift-px) * -0.4));
+  --rs-lift-far: translateY(calc(var(--rs-lift-px) * -0.12));
+}
+
+.taskbar.top {
+  --rs-lift: translateY(var(--rs-lift-px));
+  --rs-lift-near: translateY(calc(var(--rs-lift-px) * 0.4));
+  --rs-lift-far: translateY(calc(var(--rs-lift-px) * 0.12));
+}
+
+.taskbar.left {
+  --rs-lift: translateX(var(--rs-lift-px));
+  --rs-lift-near: translateX(calc(var(--rs-lift-px) * 0.4));
+  --rs-lift-far: translateX(calc(var(--rs-lift-px) * 0.12));
+}
+
+.taskbar.right {
+  --rs-lift: translateX(calc(var(--rs-lift-px) * -1));
+  --rs-lift-near: translateX(calc(var(--rs-lift-px) * -0.4));
+  --rs-lift-far: translateX(calc(var(--rs-lift-px) * -0.12));
+}
+
+.taskbar.top .weg-item {
+  transform-origin: center top !important;
+}
+
+.taskbar.left .weg-item {
+  transform-origin: left center !important;
+}
+
+.taskbar.right .weg-item {
+  transform-origin: right center !important;
+}
+
+/* The item under the pointer lifts out of the bar and grows. */
+.weg-item:hover {
+  background-color: var(--rs-tile-hover) !important;
+  transform: var(--rs-lift) scale(calc(1 + var(--rs-zoom))) !important;
+}
+
+/*
+ * ...and its neighbours follow it part of the way, two deep, which is the
+ * whole trick behind a dock that feels like a surface rather than a row of
+ * buttons.
+ *
+ * The siblings are the drag containers, not the items: every `.weg-item` is
+ * wrapped twice over, so `+` has to step between the wrappers and then reach
+ * down. `+` finds the items after the hovered one and `:has(+ ... :hover)` the
+ * ones before it - there is no previous-sibling combinator, only this.
+ */
+.weg-item-drag-container:hover + .weg-item-drag-container .weg-item,
+.weg-item-drag-container:has(+ .weg-item-drag-container:hover) .weg-item {
+  transform: var(--rs-lift-near) scale(calc(1 + var(--rs-zoom) * 0.45)) !important;
+}
+
+.weg-item-drag-container:hover + .weg-item-drag-container + .weg-item-drag-container .weg-item,
+.weg-item-drag-container:has(+ .weg-item-drag-container + .weg-item-drag-container:hover) .weg-item {
+  transform: var(--rs-lift-far) scale(calc(1 + var(--rs-zoom) * 0.15)) !important;
+}
+
+.weg-item:active {
+  background-color: var(--rs-pressed) !important;
+  transform: var(--rs-lift-near) scale(0.92) !important;
+  transition-duration: var(--rs-dur-fast) !important;
+}
+
+/* The icon inside gains a shadow as it comes forward, so the lift has depth. */
+.weg-item-icon,
+.weg-item-canvas {
+  transition:
+    filter var(--rs-dur) var(--rs-ease),
+    transform var(--rs-dur) var(--rs-ease-move) !important;
+}
+
+.weg-item:hover .weg-item-icon,
+.weg-item:hover .weg-item-canvas {
+  filter: drop-shadow(0 4px 8px rgb(0 0 0 / 0.4)) brightness(1.05) saturate(1.1) !important;
+}
+
+/*
+ * An app that has just been opened or pinned grows into the dock - and when
+ * the dock itself first appears, its items are dealt in along it rather than
+ * all popping at once. The stagger is capped at eight steps, so an app opened
+ * at the end of a long dock is not left waiting for a queue that already ran.
+ */
+.weg-item-drag-container {
+  animation: rs-item-in var(--rs-dur) var(--rs-ease-pop) both !important;
+}
+
+:is(.weg-items-left, .weg-items-center, .weg-items-right) > :nth-child(2) {
+  animation-delay: var(--rs-step) !important;
+}
+:is(.weg-items-left, .weg-items-center, .weg-items-right) > :nth-child(3) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+:is(.weg-items-left, .weg-items-center, .weg-items-right) > :nth-child(4) {
+  animation-delay: calc(var(--rs-step) * 3) !important;
+}
+:is(.weg-items-left, .weg-items-center, .weg-items-right) > :nth-child(5) {
+  animation-delay: calc(var(--rs-step) * 4) !important;
+}
+:is(.weg-items-left, .weg-items-center, .weg-items-right) > :nth-child(6) {
+  animation-delay: calc(var(--rs-step) * 5) !important;
+}
+:is(.weg-items-left, .weg-items-center, .weg-items-right) > :nth-child(7) {
+  animation-delay: calc(var(--rs-step) * 6) !important;
+}
+:is(.weg-items-left, .weg-items-center, .weg-items-right) > :nth-child(n + 8) {
+  animation-delay: calc(var(--rs-step) * 7) !important;
+}
+
+.weg-item-title {
+  color: var(--rs-fg) !important;
+  font-weight: 500 !important;
+  transition: opacity var(--rs-dur) var(--rs-ease) !important;
+}
+
+/* ------------------------------------------------------------ start button -- */
+
+/*
+ * The start button has no class of its own. It is the `@default/weg-start-menu`
+ * plugin, rendered by `PluginItem.svelte` as a plain `.weg-item[role=button]`
+ * around a `SpecificIcon` - an `<img>` from whichever icon pack has an entry
+ * for `@seelen/weg::start-menu`. So it is found by two things that are true of
+ * it and of nothing else on a normal dock:
+ *
+ *  - its tooltip begins "Start" - "Start Menu", "Startmenü", "Startmenu" - in
+ *    the languages that call it that, and no other built-in plugin's does;
+ *  - otherwise, it is the first plugin in the left group, which is where
+ *    Seelen puts it and where it stays unless dragged.
+ *
+ * Both are narrowed to a plugin (`role=button`) holding an icon rather than a
+ * canvas, so an app pinned first on the left is never mistaken for it.
+ *
+ * The glyph is drawn rather than loaded: the pack's `<img>` is made invisible
+ * and the `<figure>` around it is painted through a mask. Everything the
+ * glyph, colour, finish, size, glow and hover settings do is resolved into
+ * `--rs-start-*` tokens in `shared/tokens.css`; this only applies them.
+ */
+.weg-item[role='button']:is(
+    [data-tooltip^='Start' i],
+    .weg-items-left > .weg-item-drag-container:first-child > .weg-item-overlay > *
+  ):has(> figure.weg-item-icon) {
+  position: relative !important;
+  isolation: isolate !important;
+  /* The default drops the padding only for a square pack icon. The glyph's
+     size is its own setting, so the tile's padding must not second-guess it. */
+  padding: 0 !important;
+
+  /*
+   * A light behind the glyph, in the glyph's own colour. A `filter` glow is
+   * not possible - the figure is masked, and a mask clips everything the
+   * filter drew outside the shape - so this is a gradient on the tile, under
+   * the glyph, which the tile's own rounded overflow keeps inside the tile.
+   */
+  &::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: -1 !important;
+    pointer-events: none !important;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--rs-start-ink) calc(var(--rs-start-glow, 40) * 1%), transparent),
+      transparent
+    ) !important;
+    opacity: 0.55 !important;
+    transform: scale(0.72) !important;
+    transition:
+      opacity var(--rs-dur) var(--rs-ease),
+      transform var(--rs-dur-slow) var(--rs-ease-move) !important;
+  }
+
+  &:hover::before {
+    opacity: 1 !important;
+    transform: scale(var(--rs-start-bloom)) !important;
+  }
+
+  & > figure.weg-item-icon {
+    z-index: 1 !important;
+    background-image: var(--rs-start-paint) !important;
+    -webkit-mask-image: var(--rs-start-mask) !important;
+    mask-image: var(--rs-start-mask) !important;
+    -webkit-mask-position: center !important;
+    mask-position: center !important;
+    -webkit-mask-repeat: no-repeat !important;
+    mask-repeat: no-repeat !important;
+    -webkit-mask-size: calc(var(--rs-start-size, 70) * 1%) !important;
+    mask-size: calc(var(--rs-start-size, 70) * 1%) !important;
+    /* A filter here would be clipped by the mask; the glow does that job. */
+    filter: none !important;
+    transition: transform var(--rs-dur-slow) var(--rs-ease-pop) !important;
+  }
+
+  & > figure.weg-item-icon > img,
+  & > figure.weg-item-icon > .slu-icon-mask {
+    opacity: var(--rs-start-img) !important;
+  }
+
+  &:hover > figure.weg-item-icon {
+    transform: var(--rs-start-turn) !important;
+    animation: var(--rs-start-loop) calc(var(--rs-dur-slow) * 3.5) var(--rs-ease-smooth) infinite !important;
+  }
+
+  &:active > figure.weg-item-icon {
+    transform: scale(0.84) !important;
+    transition-duration: var(--rs-dur-fast) !important;
+  }
+}
+
+/* ------------------------------------------------------------ open marker -- */
+
+/*
+ * The open/focused marker under an item, in the surface's muted ink. The
+ * default theme already transitions its size; this adds the slow pulse that
+ * distinguishes the window you are actually in from the four beside it.
+ *
+ * No transform here: the default positions the marker with one.
+ */
+.weg-item-open-sign {
+  background-color: var(--rs-fg-muted) !important;
+  /* The smooth curve, not the exponential one: this marker *travels* between
+     two window states rather than responding to a click, and an expo-out on a
+     3px dot growing to a 25px bar looks like it snapped and then drifted. */
+  transition:
+    width var(--rs-dur) var(--rs-ease-smooth),
+    height var(--rs-dur) var(--rs-ease-smooth),
+    opacity var(--rs-dur) var(--rs-ease-smooth),
+    background-color var(--rs-dur) var(--rs-ease-smooth) !important;
+}
+
+.weg-item-open-sign.weg-item-open-sign-focused {
+  background-color: var(--rs-mark) !important;
+  animation: rs-breathe calc(var(--rs-dur-slow) * 10) ease-in-out infinite !important;
+}
+
+/*
+ * Badges, smaller and flatter than the default's 16px chips. On a dock of
+ * fifty-pixel icons, two 16px counters per item is a second row of content
+ * competing with the icons themselves - and each is only ever a number.
+ */
+.weg-item-notification-badge,
+.weg-item-custom-badge {
+  height: 13px !important;
+  min-width: 13px !important;
+  padding: 0 3px !important;
+  background-color: var(--rs-mark) !important;
+  color: var(--color-gray-50, #16161e) !important;
+  border-radius: 999px !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  animation: rs-pop-in var(--rs-dur) var(--rs-ease-pop) both !important;
+}
+
+/*
+ * How many windows an app has is the quietest thing on the item: it matters
+ * once, when you are deciding whether a click will disambiguate. Muted ink on
+ * the bar's own chip rather than a filled counter.
+ */
+.weg-item-instance-counter-badge {
+  height: 12px !important;
+  min-width: 12px !important;
+  background-color: var(--rs-chip-hover) !important;
+  color: var(--rs-fg-muted) !important;
+  border-radius: 999px !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+  opacity: 0.75 !important;
+  transition: opacity var(--rs-dur-fast) var(--rs-ease) !important;
+  animation: rs-pop-in var(--rs-dur) var(--rs-ease-pop) both !important;
+}
+
+.weg-item-overlay:hover .weg-item-instance-counter-badge {
+  opacity: 1 !important;
+}
+
+/* The rule between groups, matched to the surface's own dividers. */
+.weg-separator {
+  border-color: var(--rs-divider) !important;
+  transition: border-color var(--rs-dur) var(--rs-ease) !important;
+}
+
+.weg-empty-state-label {
+  color: var(--rs-fg-muted) !important;
+  font-style: normal !important;
+  font-size: var(--rs-text) !important;
+  animation: rs-fade var(--rs-dur-slow) var(--rs-ease) both !important;
+}

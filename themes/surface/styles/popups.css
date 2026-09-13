@@ -1,0 +1,892 @@
+/*
+ * Every flyout, popup and menu Seelen opens.
+ *
+ * One file, included by `metadata.yml` into a dozen widget ids, rather than a
+ * dozen near-identical files. The class names below are disjoint - a
+ * `.network-popup` rule is inert inside the bluetooth widget - so the cost is
+ * some dead CSS per window and the benefit is that the shared chrome (the
+ * popover ground, the controls, the section headers, a list row) is written
+ * once and cannot drift between the panels that use it.
+ *
+ * It cannot live in `sharedStyles` instead: that reaches `@ralfm/desktop` and
+ * `@ralfm/palette` too, and the `!important` these rules need to clear the
+ * widgets' own unlayered CSS would then also override the surface's own.
+ */
+
+/* ---------------------------------------------------------------- ground -- */
+
+body {
+  background-color: transparent !important;
+  color: var(--rs-fg) !important;
+  font-family: var(--rs-font) !important;
+}
+
+/*
+ * The popover is the surface's `.panel`, built the way a layered window has to
+ * build one: density, a sheen and a grain tile rather than a `backdrop-filter`
+ * with no backdrop to sample. See the material note in `shared/tokens.css`.
+ *
+ * Seelen's own `.slu-std-popover` reserves a 10px margin for the shadow, which
+ * is kept - without it the shadow is clipped to the window.
+ */
+.slu-std-popover,
+.slu-std-surface,
+.slu-std-surface-elevated {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-panel-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+  font-size: var(--rs-text) !important;
+  animation: rs-pop var(--rs-dur) var(--rs-ease) both !important;
+}
+
+/*
+ * Every icon in the shell moves rather than swapping. `.svg-icon` is Seelen's
+ * own icon component and appears in almost all of these panels, so one rule
+ * here reaches the tray, the popups, the menus and the flyouts at once.
+ */
+.svg-icon,
+.slu-icon {
+  transition:
+    transform var(--rs-dur) var(--rs-ease-pop),
+    color var(--rs-dur-fast) var(--rs-ease),
+    opacity var(--rs-dur-fast) var(--rs-ease) !important;
+}
+
+/* -------------------------------------------------------------- controls -- */
+
+/*
+ * Seelen's component library asks for a skin by data attribute. Matching the
+ * surface means a button is a shape with a fill, not a raised chip: the same
+ * 22%/38% pair `modules.css` gives `.m-btn`.
+ */
+button[data-skin='transparent'],
+button[data-skin='default'],
+button[data-skin='solid'] {
+  color: var(--rs-fg) !important;
+  border: 0 !important;
+  border-radius: var(--rs-row-radius) !important;
+  box-shadow: none !important;
+  font-size: var(--rs-text-sm) !important;
+  transition: var(--rs-tr) !important;
+}
+
+button[data-skin='transparent'] {
+  background-color: transparent !important;
+}
+
+button[data-skin='default'] {
+  background-color: var(--rs-chip) !important;
+}
+
+button[data-skin='solid'] {
+  background-color: var(--rs-selected-strong) !important;
+}
+
+button[data-skin='transparent']:hover:enabled,
+button[data-skin='default']:hover:enabled {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-chip-hover) !important;
+}
+
+button[data-skin='solid']:hover:enabled {
+  background-color: var(--rs-selected-strong) !important;
+  filter: brightness(1.12) !important;
+}
+
+button[data-skin]:active:enabled {
+  transform: scale(0.95) !important;
+  transition-duration: var(--rs-dur-fast) !important;
+}
+
+button:disabled {
+  opacity: 0.45 !important;
+}
+
+/* Text fields take the palette's treatment: no border, a lighter ground. */
+input[data-skin='default'],
+input[data-skin='transparent'],
+select[data-skin='default'],
+select[data-skin='transparent'],
+textarea {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-field) !important;
+  border: 0 !important;
+  border-radius: var(--rs-row-radius) !important;
+  font-size: var(--rs-text) !important;
+  padding: calc(5px * var(--rs-density)) calc(8px * var(--rs-density)) !important;
+  transition: var(--rs-tr) !important;
+}
+
+input[data-skin]:focus,
+select[data-skin]:focus,
+textarea:focus {
+  background-color: var(--rs-chip-hover) !important;
+  box-shadow: 0 0 0 1px var(--rs-selected-edge) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--rs-fg-muted) !important;
+}
+
+::picker(select) {
+  background-color: var(--rs-panel-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  backdrop-filter: var(--rs-backdrop) !important;
+  -webkit-backdrop-filter: var(--rs-backdrop) !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+}
+
+select option {
+  border-radius: var(--rs-row-radius) !important;
+  font-size: var(--rs-text) !important;
+  transition: var(--rs-tr) !important;
+}
+
+select option:hover {
+  background-color: var(--rs-hover) !important;
+}
+
+select option:checked {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-selected) !important;
+}
+
+select[data-skin]::picker-icon {
+  transition: transform var(--rs-dur) var(--rs-ease) !important;
+}
+
+/* A slider is the surface's thin track, filled in ink so it reads at any accent. */
+input[type='range'][data-skin='flat'] {
+  height: 6px !important;
+  border-radius: 999px !important;
+  background: var(--rs-chip-hover) !important;
+  transition: height var(--rs-dur-fast) var(--rs-ease) !important;
+}
+
+/* Thickening under the pointer is the affordance a 6px track cannot show. */
+input[type='range'][data-skin='flat']:hover {
+  height: 9px !important;
+}
+
+input[type='range'][data-skin='flat']::-webkit-slider-thumb {
+  box-shadow: -100vw 0 0 100vw var(--rs-mark) !important;
+}
+
+input[type='range'][data-skin='flat'][data-orientation='vertical'] {
+  width: 6px !important;
+}
+
+input[type='range'][data-skin='flat'][data-orientation='vertical']:hover {
+  width: 9px !important;
+}
+
+input[type='range'][data-skin='flat'][data-orientation='vertical']::-webkit-slider-thumb {
+  box-shadow: 0 100vh 0 100vh var(--rs-mark) !important;
+}
+
+/* The switch, sized and coloured as `.m-switch` in `modules.css`. */
+input[type='checkbox'][data-skin='switch'] {
+  width: 30px !important;
+  height: 17px !important;
+  background-color: var(--rs-chip-hover) !important;
+  transition: background-color var(--rs-dur) var(--rs-ease) !important;
+}
+
+/*
+ * The knob takes the *ground* colour, not white. The track when checked is the
+ * foreground ink, which is near-white in a dark theme - a white knob on it
+ * would be invisible exactly when it is on. The ground inverts with the ink,
+ * so this reads in both polarities.
+ */
+input[type='checkbox'][data-skin='switch']::before {
+  width: 13px !important;
+  height: 13px !important;
+  background-color: var(--color-gray-50, #16161e) !important;
+  transition: transform var(--rs-dur) var(--rs-ease-pop) !important;
+}
+
+input[type='checkbox'][data-skin='switch']:checked {
+  background-color: color-mix(in oklab, var(--rs-mark) 60%, transparent) !important;
+}
+
+input[type='checkbox'][data-skin='switch']:checked::before {
+  transform: translateX(13px) !important;
+}
+
+input[type='checkbox'][data-skin='default'],
+input[type='radio'][data-skin='default'] {
+  transition: var(--rs-tr) !important;
+}
+
+input[type='checkbox'][data-skin='default']:checked,
+input[type='radio'][data-skin='default']:checked {
+  border-color: var(--rs-mark) !important;
+  background-color: var(--rs-mark) !important;
+}
+
+/* ----------------------------------------------------------- menus, tips -- */
+
+/*
+ * The right-click menu, matched row for row to `MenuList.svelte`: 5px of
+ * padding around a 1px-gapped stack, 6px/10px rows, the grey hover.
+ */
+.context-menu {
+  padding: 5px !important;
+  gap: 1px !important;
+}
+
+.context-menu .menu-item {
+  color: var(--rs-fg) !important;
+  background-color: transparent !important;
+  border-radius: var(--rs-row-radius) !important;
+  padding: calc(6px * var(--rs-density)) calc(10px * var(--rs-density)) !important;
+  font-size: var(--rs-text) !important;
+  transition: var(--rs-tr) !important;
+}
+
+.context-menu .menu-item:hover:not(:disabled),
+.context-menu .menu-item:focus-visible {
+  background-color: var(--rs-hover) !important;
+}
+
+/* A row's own icon brightens and steps in as the row lights up. */
+.context-menu .menu-item .svg-icon,
+.context-menu .menu-item .menu-item-img-icon {
+  opacity: 0.6 !important;
+  transition: var(--rs-tr) !important;
+}
+
+.context-menu .menu-item:hover .svg-icon,
+.context-menu .menu-item:hover .menu-item-img-icon {
+  opacity: 1 !important;
+  transform: scale(1.1) !important;
+}
+
+.context-menu .menu-item:active:not(:disabled) {
+  background-color: var(--rs-pressed) !important;
+  transform: scale(0.985) !important;
+}
+
+.context-menu .menu-item.danger {
+  color: var(--color-red-700, #f77) !important;
+}
+
+.context-menu .menu-item-label {
+  font-weight: 400 !important;
+}
+
+/* Menu rows run in fast enough to be felt as one movement, not counted. */
+.context-menu .menu-item {
+  animation: rs-tile-in var(--rs-dur-fast) var(--rs-ease) both !important;
+}
+
+.context-menu .menu-item:nth-child(2) {
+  animation-delay: calc(var(--rs-step) * 0.5) !important;
+}
+.context-menu .menu-item:nth-child(3) {
+  animation-delay: var(--rs-step) !important;
+}
+.context-menu .menu-item:nth-child(4) {
+  animation-delay: calc(var(--rs-step) * 1.5) !important;
+}
+.context-menu .menu-item:nth-child(5) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+.context-menu .menu-item:nth-child(n + 6) {
+  animation-delay: calc(var(--rs-step) * 2.5) !important;
+}
+
+.tooltip,
+.seelen-tooltip {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-panel-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-row-radius) !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+  font-size: var(--rs-text-sm) !important;
+  animation: rs-pop var(--rs-dur-fast) var(--rs-ease) both !important;
+}
+
+/* --------------------------------------------------------------- flyouts -- */
+
+/* The volume/brightness/workspace heads-up, on the panel ground. */
+.flyout {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-panel-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+  font-size: var(--rs-text) !important;
+  animation: rs-drop var(--rs-dur) var(--rs-ease) both !important;
+}
+
+/* It arrives from whichever edge it was placed against. */
+.flyout[data-placement='bottom'] {
+  animation-name: rs-rise !important;
+}
+
+.flyout[data-placement='right'],
+.flyout[data-placement='left'] {
+  animation-name: rs-pop !important;
+}
+
+.flyout .flyout-value-label {
+  color: var(--rs-fg-muted) !important;
+  font-size: var(--rs-text-sm) !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* The bar a volume or brightness flyout is actually reporting. */
+.flyout input[type='range'] {
+  transition: none !important;
+}
+
+.flyout .player-controls > * {
+  transition: var(--rs-tr) !important;
+}
+
+.flyout .player-controls > *:hover {
+  transform: scale(1.15) !important;
+}
+
+/* --------------------------------------------------------- notifications -- */
+
+/*
+ * A toast and a row in the notification list are the same card. It takes the
+ * chip ground rather than a panel's, because it is already sitting on one -
+ * which also makes this one of the few places a blur has something behind it.
+ */
+.notification {
+  background-color: var(--rs-chip) !important;
+  border: 1px solid var(--rs-divider) !important;
+  border-radius: calc(var(--rs-row-radius) + 2px) !important;
+  box-shadow: none !important;
+  font-size: var(--rs-text) !important;
+  transition: var(--rs-tr) !important;
+  /* A toast is the one thing here that is not opened, it appears - so it
+     comes in from the edge it will leave by rather than growing in place. */
+  animation: rs-slide-right var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+.notification:nth-child(2) {
+  animation-delay: var(--rs-step) !important;
+}
+.notification:nth-child(3) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+.notification:nth-child(4) {
+  animation-delay: calc(var(--rs-step) * 3) !important;
+}
+.notification:nth-child(n + 5) {
+  animation-delay: calc(var(--rs-step) * 4) !important;
+}
+
+.notification:hover {
+  background-color: var(--rs-chip-hover) !important;
+  border-color: var(--rs-line) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--rs-shadow) !important;
+}
+
+/* The dismiss and action buttons stay out of the way until the card is. */
+.notification .notification-actions {
+  transition: opacity var(--rs-dur) var(--rs-ease) !important;
+}
+
+.notification:active:not(:has(button:active, input:active, select:active)) {
+  scale: 0.96 !important;
+}
+
+.notification .notification-header {
+  border-bottom-color: var(--rs-divider) !important;
+}
+
+.notification .notification-header-info {
+  color: var(--rs-fg-muted) !important;
+  font-size: var(--rs-text-sm) !important;
+}
+
+.notifications-popup-header > span {
+  color: var(--rs-fg-muted) !important;
+  font-size: var(--rs-text-xs) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.09em !important;
+}
+
+.notifications-popup-empty {
+  color: var(--rs-fg-muted) !important;
+  font-size: var(--rs-text) !important;
+  font-weight: 400 !important;
+  animation: rs-fade var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+/* -------------------------------------------------------- quick settings -- */
+
+/*
+ * The radio tiles (wifi, bluetooth, focus) are toggles, and the surface draws
+ * a toggle as a pill that fills when it is on - `.m-pill.m-on`.
+ */
+.quick-settings .radio-button {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-chip) !important;
+  border: 1px solid transparent !important;
+  border-radius: calc(var(--rs-row-radius) + 2px) !important;
+  transition: var(--rs-tr) !important;
+  animation: rs-tile-in var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.quick-settings .radio-button:nth-child(2) {
+  animation-delay: var(--rs-step) !important;
+}
+.quick-settings .radio-button:nth-child(3) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+.quick-settings .radio-button:nth-child(n + 4) {
+  animation-delay: calc(var(--rs-step) * 3) !important;
+}
+
+.quick-settings .radio-button:hover {
+  background-color: var(--rs-chip-hover) !important;
+  transform: translateY(-2px) !important;
+}
+
+.quick-settings .radio-button:hover .svg-icon {
+  transform: scale(1.14) !important;
+}
+
+/* A radio that has just come on: the glyph confirms the change itself. */
+.quick-settings .radio-button[aria-checked='true'] .svg-icon,
+.quick-settings .radio-button.active .svg-icon {
+  animation: rs-pop-in var(--rs-dur) var(--rs-ease-pop) !important;
+}
+
+/* The brightness and volume rows either side of the tiles. */
+.quick-settings .quick-settings-item {
+  transition: var(--rs-tr) !important;
+}
+
+.quick-settings .quick-settings-item:hover .svg-icon {
+  transform: scale(1.12) !important;
+}
+
+.quick-settings .radio-button:active {
+  transform: scale(0.95) !important;
+  transition-duration: var(--rs-dur-fast) !important;
+}
+
+.quick-settings .radio-button[aria-checked='true'],
+.quick-settings .radio-button.active,
+.quick-settings .radio-button[data-active='true'] {
+  background-color: var(--rs-selected) !important;
+  border-color: var(--rs-selected-edge) !important;
+}
+
+.quick-settings .radio-button-label {
+  font-size: var(--rs-text-sm) !important;
+  font-weight: 500 !important;
+}
+
+/* ----------------------------------------------------------------- media -- */
+
+.media-control-label,
+.network-section-title,
+.bt-list-title,
+.user-label,
+.keyboard-selector-header {
+  color: var(--rs-fg-muted) !important;
+  font-size: var(--rs-text-xs) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.09em !important;
+}
+
+.media-session {
+  background-color: var(--rs-chip) !important;
+  border-radius: calc(var(--rs-row-radius) + 2px) !important;
+  transition: var(--rs-tr) !important;
+  animation: rs-tile-in var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.media-session:hover {
+  background-color: var(--rs-chip-hover) !important;
+}
+
+.media-session-title {
+  font-size: var(--rs-text) !important;
+  font-weight: 500 !important;
+}
+
+.media-session-author {
+  color: var(--rs-fg-muted) !important;
+  font-size: var(--rs-text-sm) !important;
+}
+
+/* Art that turns with the track rather than cutting to it. */
+.media-session-thumbnail,
+.media-session-blurred-thumbnail {
+  transition:
+    opacity var(--rs-dur-slow) var(--rs-ease),
+    transform var(--rs-dur-slow) var(--rs-ease) !important;
+}
+
+.media-session:hover .media-session-thumbnail {
+  transform: scale(1.06) !important;
+}
+
+/*
+ * The one bar in the shell that reports a number rather than a state. It
+ * thickens under the pointer for the same reason the volume slider does: a
+ * 4px track gives no sign that it can be dragged.
+ */
+.media-session-progress-bar {
+  background: var(--rs-chip-hover) !important;
+  transition: height var(--rs-dur-fast) var(--rs-ease) !important;
+}
+
+.media-session:hover .media-session-progress-bar {
+  height: 6px !important;
+}
+
+.media-session-progress-bar::-webkit-slider-thumb {
+  box-shadow: -100vw 0 0 100vw var(--rs-mark) !important;
+}
+
+.media-session-actions > * {
+  transition: var(--rs-tr) !important;
+}
+
+.media-session-actions > *:hover {
+  transform: scale(1.18) !important;
+}
+
+.media-session-actions > *:active {
+  transform: scale(0.9) !important;
+}
+
+.media-device,
+.media-device-mixer-entry {
+  border-radius: var(--rs-row-radius) !important;
+  transition: var(--rs-tr) !important;
+}
+
+.media-device:hover {
+  background-color: var(--rs-hover) !important;
+}
+
+.media-device-name {
+  font-size: var(--rs-text) !important;
+}
+
+.media-device-footer {
+  border-top-color: var(--rs-divider) !important;
+}
+
+/* Switching between the mixer and a device is a view change, not a redraw. */
+.media-main-view,
+.media-device-view {
+  animation: rs-pop var(--rs-dur) var(--rs-ease) both !important;
+}
+
+/* ------------------------------------------------- network and bluetooth -- */
+
+.network-radio-control,
+.bluetooth-radio-control {
+  background-color: var(--rs-chip) !important;
+  border-radius: calc(var(--rs-row-radius) + 2px) !important;
+  box-shadow: none !important;
+  transition: var(--rs-tr) !important;
+}
+
+.network-radio-label,
+.bluetooth-radio-label {
+  font-size: var(--rs-text) !important;
+  font-weight: 500 !important;
+}
+
+.network-section:not(:last-child),
+.bt-list:not(:last-child) {
+  border-bottom-color: var(--rs-divider) !important;
+}
+
+/* A scanned network and a nearby device are list rows, and behave like them. */
+.wlan-entry,
+.bt-device {
+  border-radius: var(--rs-row-radius) !important;
+  font-size: var(--rs-text) !important;
+  transition: var(--rs-tr) !important;
+  animation: rs-tile-in var(--rs-dur-fast) var(--rs-ease) both !important;
+}
+
+.wlan-entry:nth-child(2),
+.bt-device:nth-child(2) {
+  animation-delay: calc(var(--rs-step) * 0.5) !important;
+}
+.wlan-entry:nth-child(3),
+.bt-device:nth-child(3) {
+  animation-delay: var(--rs-step) !important;
+}
+.wlan-entry:nth-child(4),
+.bt-device:nth-child(4) {
+  animation-delay: calc(var(--rs-step) * 1.5) !important;
+}
+.wlan-entry:nth-child(n + 5),
+.bt-device:nth-child(n + 5) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+
+.wlan-entry:hover,
+.wlan-entry:focus,
+.bt-device:hover {
+  background-color: var(--rs-hover) !important;
+}
+
+.wlan-entry:hover .svg-icon,
+.bt-device:hover .svg-icon {
+  transform: scale(1.1) !important;
+}
+
+/* The fields a selected network expands into arrive rather than appearing. */
+.wlan-entry-fields,
+.wlan-entry-actions,
+.bt-device-pairing,
+.bt-device-actions {
+  animation: rs-reveal var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.wlan-entry.wlan-entry-selected,
+.bt-device.bt-device-selected {
+  background-color: var(--rs-selected) !important;
+}
+
+.wlan-entry-ssid,
+.bt-device-name {
+  font-weight: 500 !important;
+}
+
+.wlan-entry-band {
+  color: var(--rs-fg-muted) !important;
+  background-color: var(--rs-chip) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  padding: 1px 7px !important;
+  font-size: var(--rs-text-xs) !important;
+}
+
+.bt-device-pin-display {
+  background-color: var(--rs-selected) !important;
+  border: 1px solid var(--rs-selected-edge) !important;
+  border-radius: var(--rs-row-radius) !important;
+  animation: rs-pop var(--rs-dur) var(--rs-ease-pop) both !important;
+}
+
+/* The scan spinner, restated so it turns at the theme's own pace. */
+.network-scanning .svg-icon,
+.bluetooth-scanning .svg-icon {
+  animation: rs-spin calc(var(--rs-dur-slow) * 4) linear infinite !important;
+}
+
+.network-empty,
+.bluetooth-empty,
+.network-no-adapter,
+.bluetooth-no-adapter,
+.user-empty-list {
+  color: var(--rs-fg-muted) !important;
+  font-style: normal !important;
+  font-size: var(--rs-text) !important;
+  animation: rs-fade var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+/* -------------------------------------------------------------- calendar -- */
+
+.calendar-popup .calendar-date {
+  border-radius: var(--rs-row-radius) !important;
+  font-size: var(--rs-text) !important;
+  transition: var(--rs-tr) !important;
+}
+
+.calendar-popup .calendar-date:hover,
+.calendar-popup .calendar-navigator:hover,
+.calendar-popup .calendar-cell:hover,
+.calendar-popup .calendar-month-cell:hover {
+  background-color: var(--rs-hover) !important;
+}
+
+.calendar-popup .calendar-navigator,
+.calendar-popup .calendar-cell,
+.calendar-popup .calendar-month-cell {
+  border-radius: var(--rs-row-radius) !important;
+  transition: var(--rs-tr) !important;
+}
+
+.calendar-popup .calendar-navigator:active {
+  transform: scale(0.88) !important;
+}
+
+.calendar-popup .calendar-cell:hover,
+.calendar-popup .calendar-month-cell:hover {
+  transform: scale(1.12) !important;
+}
+
+.calendar-popup .calendar-cell:active,
+.calendar-popup .calendar-month-cell:active {
+  transform: scale(0.9) !important;
+}
+
+/* A month change is a move between months, so the grid slides rather than
+   repaints - it is the only cue that the arrow did anything. */
+.calendar-popup .calendar-month-view,
+.calendar-popup .calendar-year-view {
+  animation: rs-pop var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.calendar-popup .calendar-weekday {
+  color: var(--rs-fg-muted) !important;
+  font-size: var(--rs-text-xs) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.09em !important;
+  opacity: 1 !important;
+}
+
+/* Today is marked in ink, not in fill; the fill is reserved for selection. */
+.calendar-popup .calendar-cell.calendar-cell-today,
+.calendar-popup .calendar-month-cell.calendar-month-cell-current {
+  color: var(--rs-fg) !important;
+  font-weight: 700 !important;
+}
+
+.calendar-popup .calendar-cell.calendar-cell-selected {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-selected-strong) !important;
+}
+
+.calendar-popup .calendar-cell.calendar-cell-selected:hover {
+  background-color: var(--rs-selected-strong) !important;
+  opacity: 1 !important;
+}
+
+/* ------------------------------------------------------------ tray, user -- */
+
+.system-tray .system-tray-item {
+  border-radius: var(--rs-row-radius) !important;
+  padding: calc(4px * var(--rs-density)) calc(6px * var(--rs-density)) !important;
+  transition: var(--rs-tr) !important;
+  animation: rs-tile-in var(--rs-dur-fast) var(--rs-ease) both !important;
+}
+
+.system-tray .system-tray-item:nth-child(2) {
+  animation-delay: calc(var(--rs-step) * 0.5) !important;
+}
+.system-tray .system-tray-item:nth-child(3) {
+  animation-delay: var(--rs-step) !important;
+}
+.system-tray .system-tray-item:nth-child(n + 4) {
+  animation-delay: calc(var(--rs-step) * 1.5) !important;
+}
+
+.system-tray .system-tray-item:hover {
+  background-color: var(--rs-hover) !important;
+}
+
+.system-tray .system-tray-item:hover .system-tray-item-icon {
+  transform: scale(1.15) !important;
+}
+
+.system-tray .system-tray-item-icon {
+  transition: transform var(--rs-dur) var(--rs-ease-pop) !important;
+}
+
+.system-tray .system-tray-item:active {
+  background-color: var(--rs-pressed) !important;
+  transform: scale(0.98) !important;
+}
+
+.system-tray .system-tray-item-label {
+  font-size: var(--rs-text) !important;
+  font-weight: 400 !important;
+}
+
+.user-seelen-option-item,
+.user-directory-summary,
+.user-file,
+.user-list-extender,
+.keyboard-selector .layout {
+  border-radius: var(--rs-row-radius) !important;
+  font-size: var(--rs-text) !important;
+  transition: var(--rs-tr) !important;
+}
+
+.user-seelen-option-item:hover,
+.user-directory-summary:hover,
+.user-file:hover,
+.user-list-extender:hover,
+.keyboard-selector .layout:hover {
+  background-color: var(--rs-hover) !important;
+}
+
+.user-seelen-option-item:active,
+.user-file:active,
+.keyboard-selector .layout:active {
+  background-color: var(--rs-pressed) !important;
+  transform: scale(0.985) !important;
+}
+
+.keyboard-selector .layout.layout-active {
+  background-color: var(--rs-selected) !important;
+}
+
+/* A folder that opens: its contents run in, and the chevron turns with them. */
+.user-directory .file-list > * {
+  animation: rs-tile-in var(--rs-dur-fast) var(--rs-ease) both !important;
+}
+
+.user-directory .chevron {
+  transition: transform var(--rs-dur) var(--rs-ease) !important;
+}
+
+.keyboard-selector .layout-keyboard,
+.user-file-date,
+.user-profile-email {
+  color: var(--rs-fg-muted) !important;
+  font-size: var(--rs-text-sm) !important;
+}
+
+.user-profile-picture-container {
+  transition: transform var(--rs-dur) var(--rs-ease) !important;
+}
+
+.user-profile-container:hover .user-profile-picture-container {
+  transform: scale(1.04) !important;
+}
+
+.user-profile-lock-button,
+.user-profile-settings-button {
+  color: var(--rs-fg-muted) !important;
+  background-color: var(--rs-chip) !important;
+  border-color: var(--rs-line) !important;
+  transition: var(--rs-tr) !important;
+}
+
+.user-profile-lock-button:hover,
+.user-profile-settings-button:hover {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-chip-hover) !important;
+  transform: scale(1.12) !important;
+}
+
+.user-list-extender {
+  color: var(--rs-fg-muted) !important;
+}

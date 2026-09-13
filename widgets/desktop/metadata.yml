@@ -1,0 +1,1196 @@
+id: "@ralfm/desktop"
+icon: PiDesktopTowerDuotone
+metadata:
+  displayName: !extend i18n/display_name.yml
+  description: !extend i18n/description.yml
+  tags:
+    - desktop
+    - launcher
+    - widgets
+
+loader: ThirdParty
+preset: Desktop
+instances: ReplicaByMonitor
+lazy: false
+
+# The wallpaper layer decodes video; keep it on the GPU regardless of the
+# user's global hardware-acceleration preference.
+forceHardwareAcceleration: true
+
+html: !include index.html
+js: !include index.js
+css: !include index.css
+
+shortcuts:
+  # Windows' own Win+D raises Explorer's desktop over this surface, which then
+  # has to climb back over it (see `src/lib/desktoplayer.svelte.ts`). This
+  # reveals the desktop by minimising the windows instead, which never moves
+  # Explorer's desktop at all.
+  - id: show-desktop
+    command: ["widget", "trigger", "@ralfm/desktop"]
+    label: Show the desktop
+    defaultKeys: ["Win", "Shift", "D"]
+
+settings:
+  - group:
+      label: Layout
+      description: How icons and module panels are placed on the surface.
+      items:
+        - type: range
+          key: gridSize
+          label: Grid cell size
+          min: 48
+          max: 200
+          step: 4
+          defaultValue: 96
+          allowSetByMonitor: true
+        - type: switch
+          key: snapToGrid
+          label: Snap to grid
+          description: Turn off for pixel-precise placement.
+          defaultValue: true
+          allowSetByMonitor: true
+        - type: switch
+          key: lockLayout
+          label: Lock layout
+          description: Prevents dragging icons and panels.
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: range
+          key: iconSize
+          label: Icon size
+          min: 24
+          max: 128
+          step: 4
+          defaultValue: 48
+          allowSetByMonitor: true
+        - type: select
+          key: labelMode
+          label: Icon labels
+          options:
+            - label: Always
+              value: always
+            - label: On hover
+              value: hover
+            - label: Never
+              value: never
+          defaultValue: always
+          allowSetByMonitor: true
+  - group:
+      label: Typography
+      description: >-
+        Leave a font empty to inherit whatever the active Seelen theme sets.
+        Everything on the surface is sized from the base size, so moving it
+        moves the whole surface rather than one label.
+      items:
+        - type: font
+          key: fontFamily
+          label: Interface font
+          description: Used for every label, row and menu on the surface.
+          defaultValue: ""
+          allowSetByMonitor: true
+        - type: font
+          key: displayFont
+          label: Display font
+          description: The clock, the timer and panel titles only. Leave empty to use the interface font.
+          defaultValue: ""
+          allowSetByMonitor: true
+        - type: range
+          key: fontSize
+          label: Base text size
+          min: 10
+          max: 18
+          step: 1
+          defaultValue: 14
+          allowSetByMonitor: true
+        - type: select
+          key: titleStyle
+          label: Panel titles
+          options:
+            - label: Small caps
+              value: caps
+            - label: Plain
+              value: plain
+            - label: Hidden
+              value: hidden
+          defaultValue: caps
+          allowSetByMonitor: true
+  - group:
+      label: Appearance
+      items:
+        - type: switch
+          key: followTheme
+          label: Follow the active theme
+          description: >-
+            Takes the panel colour and accent from the Seelen theme you have
+            enabled, so a theme preset restyles the surface along with the rest
+            of the shell. Turn off to use the tint and accent below instead.
+          defaultValue: true
+        - type: range
+          key: surfaceHue
+          label: Panel tint hue
+          description: Ignored while the tint strength below is zero.
+          min: 0
+          max: 360
+          step: 5
+          defaultValue: 240
+          allowSetByMonitor: true
+        - type: range
+          key: surfaceChroma
+          label: Panel tint strength
+          description: Zero leaves the panel neutral. Applied on top of the theme's own tint.
+          min: 0
+          max: 20
+          step: 1
+          defaultValue: 0
+          allowSetByMonitor: true
+        - type: range
+          key: panelOpacity
+          label: Panel opacity
+          min: 0
+          max: 100
+          step: 1
+          defaultValue: 60
+          allowSetByMonitor: true
+        - type: range
+          key: panelBlur
+          label: Panel blur
+          min: 0
+          max: 48
+          step: 1
+          defaultValue: 20
+          allowSetByMonitor: true
+        - type: range
+          key: panelBorder
+          label: Panel edge strength
+          min: 0
+          max: 100
+          step: 1
+          defaultValue: 34
+          allowSetByMonitor: true
+        - type: select
+          key: panelShadow
+          label: Panel shadow
+          options:
+            - label: None
+              value: none
+            - label: Soft
+              value: soft
+            - label: Medium
+              value: medium
+            - label: Deep
+              value: deep
+          defaultValue: soft
+          allowSetByMonitor: true
+        - type: switch
+          key: panelTexture
+          label: Frosted texture
+          description: >-
+            The sheen and grain that make a translucent panel read as glass
+            rather than as tint. Sent to the shell theme too, where it matters
+            more - a dock cannot blur its backdrop, so this is the whole of
+            what makes one look frosted.
+          defaultValue: true
+          allowSetByMonitor: true
+        - type: range
+          key: cornerRadius
+          label: Corner radius
+          min: 0
+          max: 36
+          step: 1
+          defaultValue: 16
+          allowSetByMonitor: true
+        - type: select
+          key: density
+          label: Density
+          description: How much air every row, list and panel body carries.
+          options:
+            - label: Compact
+              value: compact
+            - label: Cosy
+              value: cosy
+            - label: Roomy
+              value: roomy
+          defaultValue: cosy
+          allowSetByMonitor: true
+        - type: range
+          key: iconRadius
+          label: Icon corner radius
+          min: 0
+          max: 24
+          step: 1
+          defaultValue: 10
+          allowSetByMonitor: true
+        - type: color
+          key: accentColor
+          label: Accent colour
+          description: Used when the surface is not following the theme.
+          defaultValue: "#7aa2f7"
+        - type: switch
+          key: animations
+          label: Animations
+          defaultValue: true
+        - type: switch
+          key: styleShell
+          label: Apply these to the Seelen shell
+          description: >-
+            Mirrors the font, text size, density, corner radius, blur, edge and
+            animation settings above into the "Desktop Surface" theme, so the
+            dock, the start menu and every popup are dressed the same way. Needs
+            that theme enabled. Colour is not sent - that travels the other way,
+            from the theme's preset into this surface.
+          defaultValue: true
+
+  - group:
+      label: Wallpaper
+      description: Backgrounds are chosen per monitor from the surface context menu.
+      items:
+        - type: switch
+          key: wallpaperEnabled
+          label: Enable wallpaper engine
+          description: When off, the surface is transparent and Windows' own wallpaper shows through.
+          defaultValue: true
+          allowSetByMonitor: true
+        - type: select
+          key: wallpaperFit
+          label: Fit
+          options:
+            - label: Cover
+              value: cover
+            - label: Contain
+              value: contain
+            - label: Fill
+              value: fill
+            - label: None
+              value: none
+          defaultValue: cover
+          allowSetByMonitor: true
+          dependencies: [wallpaperEnabled]
+        - type: range
+          key: wallpaperBlur
+          label: Blur
+          min: 0
+          max: 40
+          step: 1
+          defaultValue: 0
+          allowSetByMonitor: true
+          dependencies: [wallpaperEnabled]
+        - type: range
+          key: wallpaperSaturation
+          label: Saturation
+          min: 0
+          max: 200
+          step: 5
+          defaultValue: 100
+          allowSetByMonitor: true
+          dependencies: [wallpaperEnabled]
+        - type: range
+          key: wallpaperBrightness
+          label: Brightness
+          min: 10
+          max: 150
+          step: 5
+          defaultValue: 100
+          allowSetByMonitor: true
+          dependencies: [wallpaperEnabled]
+        - type: color
+          key: wallpaperOverlayColor
+          label: Tint colour
+          defaultValue: "#000000"
+          dependencies: [wallpaperEnabled]
+        - type: range
+          key: wallpaperOverlayOpacity
+          label: Tint strength
+          min: 0
+          max: 100
+          step: 1
+          defaultValue: 0
+          allowSetByMonitor: true
+          dependencies: [wallpaperEnabled]
+        - type: switch
+          key: wallpaperMuted
+          label: Mute video wallpapers
+          defaultValue: true
+          dependencies: [wallpaperEnabled]
+        - type: switch
+          key: wallpaperPauseWhenCovered
+          label: Pause video when covered
+          description: Stops decoding while a window hides the desktop.
+          defaultValue: true
+          dependencies: [wallpaperEnabled]
+        - type: switch
+          key: slideshowEnabled
+          label: Slideshow
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [wallpaperEnabled]
+        - type: number
+          key: slideshowInterval
+          label: Slideshow interval (seconds)
+          defaultValue: 300
+          dependencies: [wallpaperEnabled, slideshowEnabled]
+        - type: switch
+          key: slideshowRandomize
+          label: Shuffle slideshow
+          defaultValue: true
+          dependencies: [wallpaperEnabled, slideshowEnabled]
+
+  - group:
+      label: Modules
+      items:
+        - type: switch
+          key: moduleClock
+          label: Clock and calendar
+          defaultValue: true
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleMedia
+          label: Media and audio
+          defaultValue: true
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleSysmon
+          label: System monitor
+          defaultValue: true
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleNotes
+          label: Notes
+          defaultValue: true
+          allowSetByMonitor: true
+        # Off by default: the desktop should not fill itself with panels the
+        # first time the widget is installed. Each one is a click away in the
+        # surface's own Modules menu.
+        - type: switch
+          key: moduleCalendar
+          label: Calendar
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleWorldClock
+          label: World clock
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleTimer
+          label: Timer
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleBattery
+          label: Battery
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: modulePower
+          label: Power
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleQuick
+          label: Quick settings
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleWindows
+          label: Open windows
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleWorkspaces
+          label: Workspaces
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleNetwork
+          label: Network
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleBluetooth
+          label: Bluetooth
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleNotifications
+          label: Notifications
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleClipboard
+          label: Clipboard history
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleTrash
+          label: Recycle bin
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleFiles
+          label: Files
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleGames
+          label: Games
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleChat
+          label: Assistant
+          defaultValue: false
+          allowSetByMonitor: true
+
+  # Every per-module option below is also reachable by right-clicking the module
+  # itself on the surface, which writes back here. They are all
+  # `allowSetByMonitor` so that "this display only" has somewhere to land.
+  - group:
+      label: Clock
+      items:
+        - type: switch
+          key: clock24h
+          label: 24-hour time
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleClock]
+        - type: switch
+          key: clockShowSeconds
+          label: Show seconds
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleClock]
+        - type: switch
+          key: clockShowDate
+          label: Show date
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleClock]
+
+  - group:
+      label: Media
+      items:
+        - type: switch
+          key: mediaShowArt
+          label: Show album art
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleMedia]
+        - type: switch
+          key: mediaShowVisualiser
+          label: Show visualiser
+          description: Only drawn once the waveform stream carries real signal.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleMedia]
+        - type: switch
+          key: mediaShowMixer
+          label: Show audio mixer
+          description: Per-application volume, mute and output device.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleMedia]
+
+  - group:
+      label: System monitor
+      items:
+        - type: switch
+          key: sysmonCpu
+          label: CPU
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleSysmon]
+        - type: switch
+          key: sysmonRam
+          label: Memory
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleSysmon]
+        - type: switch
+          key: sysmonDisk
+          label: Disks
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleSysmon]
+        - type: switch
+          key: sysmonNet
+          label: Network
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleSysmon]
+
+  - group:
+      label: Notes
+      items:
+        - type: select
+          key: notesDefaultTab
+          label: Opens on
+          options:
+            - label: Todo
+              value: todo
+            - label: Note
+              value: note
+          defaultValue: todo
+          allowSetByMonitor: true
+          dependencies: [moduleNotes]
+        - type: switch
+          key: notesHideCompleted
+          label: Hide completed tasks
+          description: They are kept, just not listed.
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleNotes]
+
+  - group:
+      label: Calendar
+      items:
+        - type: switch
+          key: calendarStartMonday
+          label: Weeks start on Monday
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleCalendar]
+        - type: switch
+          key: calendarWeekNumbers
+          label: Show week numbers
+          description: ISO-8601 weeks, in a column down the left.
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleCalendar]
+        - type: switch
+          key: calendarHighlightWeekend
+          label: Mute weekends
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleCalendar]
+
+  - group:
+      label: World clock
+      items:
+        - type: text
+          key: worldClockZones
+          label: Time zones
+          description: IANA names separated by commas, e.g. Europe/London, Asia/Tokyo.
+          defaultValue: "UTC, Europe/London, America/New_York, Asia/Tokyo"
+          allowSetByMonitor: true
+          dependencies: [moduleWorldClock]
+        - type: switch
+          key: worldClock24h
+          label: 24-hour time
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleWorldClock]
+        - type: switch
+          key: worldClockOffsets
+          label: Show offset from this machine
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleWorldClock]
+
+  - group:
+      label: Timer
+      items:
+        - type: range
+          key: timerWorkMinutes
+          label: Focus length (minutes)
+          min: 1
+          max: 120
+          step: 1
+          defaultValue: 25
+          allowSetByMonitor: true
+          dependencies: [moduleTimer]
+        - type: range
+          key: timerBreakMinutes
+          label: Break length (minutes)
+          min: 1
+          max: 60
+          step: 1
+          defaultValue: 5
+          allowSetByMonitor: true
+          dependencies: [moduleTimer]
+        - type: switch
+          key: timerChime
+          label: Chime when it ends
+          description: Two short tones, played through the default output.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleTimer]
+        - type: switch
+          key: timerAutoContinue
+          label: Start the next phase automatically
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleTimer]
+
+  - group:
+      label: Battery
+      description: A machine with no battery shows its mains and power-plan state instead.
+      items:
+        - type: switch
+          key: batteryShowRate
+          label: Show power draw
+          description: Watts in or out, while the battery is not idle.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleBattery]
+        - type: switch
+          key: batteryShowHealth
+          label: Show health
+          description: Full charge as a share of the design capacity.
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleBattery]
+        - type: switch
+          key: batteryShowPowerMode
+          label: Show power mode
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleBattery]
+
+  - group:
+      label: Power
+      items:
+        - type: switch
+          key: powerConfirm
+          label: Confirm before ending the session
+          description: Sign out, restart and shut down ask twice.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [modulePower]
+        - type: switch
+          key: powerShowSleep
+          label: Show sleep
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [modulePower]
+        - type: switch
+          key: powerShowHibernate
+          label: Show hibernate
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [modulePower]
+        - type: switch
+          key: powerShowShutdown
+          label: Show restart and shut down
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [modulePower]
+
+  - group:
+      label: Quick settings
+      items:
+        - type: switch
+          key: quickBrightness
+          label: Brightness
+          description: Only monitors that answer a brightness request appear.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleQuick]
+        - type: switch
+          key: quickRadios
+          label: Wi-Fi and bluetooth switches
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleQuick]
+        - type: switch
+          key: quickFocusAssist
+          label: Focus assist
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleQuick]
+
+  - group:
+      label: Open windows
+      items:
+        - type: switch
+          key: windowsThisDisplayOnly
+          label: Only windows on this display
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleWindows]
+        - type: switch
+          key: windowsGroupByApp
+          label: Group by application
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleWindows]
+        - type: switch
+          key: windowsHideMinimised
+          label: Hide minimised windows
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleWindows]
+        - type: switch
+          key: windowsShowIcons
+          label: Show icons
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleWindows]
+
+  - group:
+      label: Workspaces
+      description: Seelen's virtual desktops are per monitor, so each display lists its own.
+      items:
+        - type: switch
+          key: workspacesShowNames
+          label: Show names
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleWorkspaces]
+        - type: switch
+          key: workspacesShowCounts
+          label: Show window counts
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleWorkspaces]
+        - type: switch
+          key: workspacesShowControls
+          label: Allow editing
+          description: Adds, renames and removes desktops from the panel.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleWorkspaces]
+
+  - group:
+      label: Network
+      items:
+        - type: switch
+          key: networkShowWifi
+          label: Show wireless networks
+          description: Scans when the panel appears, and whenever you press Scan.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleNetwork]
+        - type: switch
+          key: networkShowIp
+          label: Show local address
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleNetwork]
+        - type: switch
+          key: networkShowAdapters
+          label: Show adapters
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleNetwork]
+
+  - group:
+      label: Bluetooth
+      description: Pairing stays in Windows Settings; the host exposes no pin exchange.
+      items:
+        - type: switch
+          key: bluetoothPairedOnly
+          label: Only paired devices
+          description: Turn off to also list whatever a scan finds nearby.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleBluetooth]
+        - type: switch
+          key: bluetoothShowRadio
+          label: Show the bluetooth switch
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleBluetooth]
+
+  - group:
+      label: Notifications
+      items:
+        - type: switch
+          key: notificationsShowBody
+          label: Show message text
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleNotifications]
+        - type: switch
+          key: notificationsShowApp
+          label: Show app and time
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleNotifications]
+        - type: switch
+          key: notificationsShowControls
+          label: Show focus assist
+          description: The switch, and what still gets through while it is on.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleNotifications]
+        - type: range
+          key: notificationsMax
+          label: How many to list
+          min: 3
+          max: 40
+          step: 1
+          defaultValue: 8
+          allowSetByMonitor: true
+          dependencies: [moduleNotifications]
+
+  - group:
+      label: Clipboard history
+      description: Windows keeps the history; turn it on with Win+V if the panel says it is off.
+      items:
+        - type: switch
+          key: clipboardPasteOnClick
+          label: Paste on click
+          description: Otherwise a click only puts the entry back on the clipboard.
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleClipboard]
+        - type: switch
+          key: clipboardShowImages
+          label: Show image previews
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleClipboard]
+        - type: switch
+          key: clipboardShowSource
+          label: Show source app and time
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleClipboard]
+        - type: range
+          key: clipboardMax
+          label: How many to list
+          min: 3
+          max: 50
+          step: 1
+          defaultValue: 15
+          allowSetByMonitor: true
+          dependencies: [moduleClipboard]
+
+  - group:
+      label: Files
+      items:
+        - type: select
+          key: filesFolder
+          label: Folder
+          description: Where browsing starts. Subfolders are opened in the panel.
+          options:
+            - label: Recent
+              value: Recent
+            - label: Downloads
+              value: Downloads
+            - label: Documents
+              value: Documents
+            - label: Pictures
+              value: Pictures
+            - label: Music
+              value: Music
+            - label: Videos
+              value: Videos
+            - label: Desktop
+              value: Desktop
+          defaultValue: Recent
+          allowSetByMonitor: true
+          dependencies: [moduleFiles]
+        - type: select
+          key: filesView
+          label: View
+          options:
+            - label: List
+              value: list
+            - label: Tiles
+              value: grid
+          defaultValue: list
+          allowSetByMonitor: true
+          dependencies: [moduleFiles]
+        - type: range
+          key: filesTileSize
+          label: Tile size
+          description: Tiles view only.
+          min: 40
+          max: 140
+          step: 4
+          defaultValue: 64
+          allowSetByMonitor: true
+          dependencies: [moduleFiles]
+        - type: select
+          key: filesSort
+          label: Order
+          description: Folders always come first.
+          options:
+            - label: Name
+              value: name
+            - label: Type
+              value: type
+          defaultValue: name
+          allowSetByMonitor: true
+          dependencies: [moduleFiles]
+        - type: switch
+          key: filesShowSearch
+          label: Show the filter box
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleFiles]
+        - type: range
+          key: filesMax
+          label: How many to list
+          min: 5
+          max: 200
+          step: 5
+          defaultValue: 30
+          allowSetByMonitor: true
+          dependencies: [moduleFiles]
+        - type: switch
+          key: filesShowIcons
+          label: Show icons
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleFiles]
+
+  - group:
+      label: Recycle bin
+      items:
+        - type: switch
+          key: trashConfirmEmpty
+          label: Confirm before emptying
+          description: Emptying the bin cannot be undone.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleTrash]
+
+  - group:
+      label: Games
+      description: >-
+        Games are found three ways: the Start Menu index, a walk of the folders
+        downloads land in, and whatever is seen running.
+      items:
+        - type: switch
+          key: gamesAutoDetect
+          label: Find games automatically
+          description: Matches the Start Menu index against each store's own shortcuts.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesDeepScan
+          label: Search Downloads, Desktop and Documents
+          description: >-
+            Recognises a game by the engine and store files that shipped with it,
+            which is what finds one that came from the web rather than a store.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesScanRunning
+          label: Add games when they are played
+          description: >-
+            Anything running from a game library is added, which is the only way
+            to see a Game Pass title.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesTrackPlaytime
+          label: Track play time
+          description: Timed from the game's own window, and only while the panel is shown.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: select
+          key: gamesLayout
+          label: Layout
+          options:
+            - label: Grid
+              value: grid
+            - label: Shelf
+              value: shelf
+            - label: List
+              value: list
+          defaultValue: grid
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: range
+          key: gamesTileSize
+          label: Tile size
+          min: 48
+          max: 200
+          step: 4
+          defaultValue: 72
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: select
+          key: gamesArtShape
+          label: Art shape
+          options:
+            - label: Square
+              value: square
+            - label: Box art (2:3)
+              value: portrait
+            - label: Capsule (16:9)
+              value: wide
+          defaultValue: square
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: select
+          key: gamesArtStyle
+          label: Art
+          description: Cover images you choose are used whatever this is set to.
+          options:
+            - label: Gradient and icon
+              value: auto
+            - label: Icon only
+              value: icon
+            - label: Initials
+              value: plain
+          defaultValue: auto
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: select
+          key: gamesLabelMode
+          label: Titles
+          options:
+            - label: Always
+              value: always
+            - label: On hover
+              value: hover
+            - label: Never
+              value: never
+          defaultValue: always
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: select
+          key: gamesSort
+          label: Order
+          options:
+            - label: Recently played
+              value: recent
+            - label: Most played
+              value: played
+            - label: Name
+              value: name
+            - label: Store
+              value: launcher
+          defaultValue: recent
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesFavouritesFirst
+          label: Favourites first
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesGroupByLauncher
+          label: Group by store
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesShowSearch
+          label: Show the search box
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesShowLauncher
+          label: Show the store badge
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesShowRunning
+          label: Mark games that are running
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesShowStats
+          label: Show play time
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesHoverZoom
+          label: Lift the art on hover
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+        - type: switch
+          key: gamesShowMissing
+          label: Show uninstalled games
+          description: Entries a rescan no longer finds, kept for their play time.
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleGames]
+
+  # The API key is deliberately absent from this file. Settings live in
+  # Seelen's own settings store, which is shared, exportable and per-monitor
+  # patchable; a credential belongs in none of those. The panel asks for it
+  # and keeps it in the widget's data directory instead.
+  - group:
+      label: Assistant
+      items:
+        - type: select
+          key: chatProvider
+          label: Service
+          description: The API key is asked for in the panel itself.
+          options:
+            - label: Ollama (local)
+              value: ollama
+            - label: Gemini
+              value: gemini
+            - label: OpenAI
+              value: openai
+            - label: Claude
+              value: anthropic
+            - label: OpenRouter
+              value: openrouter
+            - label: Groq
+              value: groq
+            - label: LM Studio (local)
+              value: lmstudio
+            - label: Custom endpoint
+              value: custom
+          defaultValue: ollama
+          allowSetByMonitor: true
+          dependencies: [moduleChat]
+        - type: text
+          key: chatModel
+          label: Model
+          description: Leave blank for the service's own default.
+          defaultValue: ""
+          allowSetByMonitor: true
+          dependencies: [moduleChat]
+        - type: switch
+          key: chatRouting
+          label: Choose the model per question
+          description: >-
+            Keeps questions about this PC local, sends harder ones to the
+            strongest service you have a key for, and moves on when one is rate
+            limited or down.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleChat]
+        - type: switch
+          key: chatTools
+          label: Let it use this PC
+          description: >-
+            Works as an agent: reads and controls apps, windows, media, devices,
+            files, notes and the web. Which of those, and when it asks first,
+            is set in the assistant's own settings (the gear in its panel).
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleChat]
+        - type: switch
+          key: chatContext
+          label: Send a status summary
+          description: >-
+            Puts the time, load, battery and open apps at the top of every turn
+            so it does not have to ask. Sent to whichever service answers.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleChat]
+        - type: text
+          key: chatSystemPrompt
+          label: System prompt
+          description: Sets the tone for every reply.
+          defaultValue: "Be concise and direct. Use Markdown only where it helps."
+          allowSetByMonitor: true
+          dependencies: [moduleChat]
+        - type: switch
+          key: chatStream
+          label: Stream replies
+          description: Shows the answer as it is written instead of all at once.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleChat]

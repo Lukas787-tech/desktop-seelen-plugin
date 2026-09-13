@@ -1,0 +1,40 @@
+{
+  "name": "ralfm-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Custom desktop surface for Windows, built as a Seelen UI third-party widget",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Lukas787-tech/seelen-desktop-surface.git"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:desktop": "node scripts/build.mjs desktop",
+    "build:palette": "node scripts/build.mjs palette",
+    "link": "node scripts/link.mjs",
+    "unlink": "node scripts/link.mjs --unload",
+    "dev": "node scripts/build.mjs --watch",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "status": "node scripts/status.mjs",
+    "reload": "node scripts/build.mjs && node scripts/link.mjs --reload",
+    "deploy": "node scripts/build.mjs && node scripts/install.mjs",
+    "undeploy": "node scripts/install.mjs --uninstall",
+    "preview": "node scripts/preview.mjs",
+    "voice:install": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/voice/install.ps1",
+    "release": "node scripts/release.mjs",
+    "test": "node node_modules/esbuild/bin/esbuild src/lib/shellplan.ts --format=esm --outfile=.test/shellplan.mjs --log-level=error && node scripts/test/shellplan.test.mjs && node node_modules/esbuild/bin/esbuild src/lib/wire.ts src/lib/stream.ts src/lib/markdown.ts src/lib/assistant-state.ts src/lib/routing.ts src/lib/providers.ts src/lib/tool.ts src/lib/web.ts src/lib/speech.ts src/lib/pcm.ts src/lib/vad.ts src/lib/voice-engines.ts --bundle --format=esm --outdir=.test --out-extension:.js=.mjs --log-level=error && node scripts/test/assistant.test.mjs && node scripts/test/voice.test.mjs"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "@tsconfig/svelte": "^5.0.4",
+    "svelte": "^5.19.0",
+    "svelte-check": "^4.1.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
+  },
+  "dependencies": {
+    "@seelen-ui/lib": "2.8.2"
+  }
+}

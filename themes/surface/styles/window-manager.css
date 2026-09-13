@@ -1,0 +1,67 @@
+/*
+ * The tiling window manager's own chrome: the border it draws around a managed
+ * window, the bar over a stack, and the placeholder a reserved slot shows.
+ *
+ * Only the stack bar is a panel; the other two are markers on the desktop and
+ * take the accent rather than a ground.
+ */
+
+.wm-leaf.wm-leaf-with-borders {
+  border-color: var(--rs-line) !important;
+  transition: border-color var(--rs-dur) var(--rs-ease) !important;
+}
+
+.wm-leaf.wm-leaf-with-borders.wm-leaf-focused {
+  border-color: var(--rs-selected-edge) !important;
+}
+
+.wm-stack .wm-stack-bar {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-panel-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+  font-family: var(--rs-font) !important;
+  animation: rs-drop var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.wm-stack .wm-stack-bar-item {
+  border-radius: var(--rs-row-radius) !important;
+  padding: 2px 6px !important;
+  transition: var(--rs-tr) !important;
+  animation: rs-item-in var(--rs-dur) var(--rs-ease-pop) both !important;
+}
+
+.wm-stack .wm-stack-bar-item:hover {
+  background-color: var(--rs-hover) !important;
+}
+
+.wm-stack .wm-stack-bar-item:active {
+  transform: scale(0.96) !important;
+}
+
+.wm-stack .wm-stack-bar-item[aria-selected='true'],
+.wm-stack .wm-stack-bar-item.active {
+  background-color: var(--rs-selected) !important;
+}
+
+.wm-stack .wm-stack-bar-item-title {
+  font-size: var(--rs-text) !important;
+  font-weight: 500 !important;
+}
+
+/*
+ * The slot a window is about to land in: the selection wash, at panel corner.
+ * The host already transitions its geometry; the pulse is what distinguishes
+ * "this is where it goes" from a window that is simply drawn oddly.
+ */
+.wm-reserved {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-selected-strong) !important;
+  border: 1px solid var(--rs-selected-edge) !important;
+  border-radius: var(--rs-radius) !important;
+  opacity: 1 !important;
+  animation: rs-breathe calc(var(--rs-dur-slow) * 6) ease-in-out infinite !important;
+}

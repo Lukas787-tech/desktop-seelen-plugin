@@ -1,0 +1,268 @@
+/*
+ * The app switcher (Alt+Tab): icons, and nothing else.
+ *
+ * Seelen renders every card as
+ *
+ *   .task > .task-header > [ .task-icon | .task-title | button ]
+ *         > .task-preview-container > .task-preview | .task-no-preview
+ *
+ * and the default theme lays that header out as a 20px / 1fr / min-content
+ * grid over a 150px-tall window preview - so the application's own logo, which
+ * Seelen has already resolved through the active icon pack, is a twenty-pixel
+ * afterthought on a card that is mostly a screenshot.
+ *
+ * Alt+Tab is read at a glance and under a held key. A logo is recognised in a
+ * fraction of the time a title is, and a thumbnail of a text editor looks like
+ * a thumbnail of every other text editor - so the preview goes entirely and
+ * the card becomes the icon.
+ *
+ * The title is not deleted, only made quiet: it has a reserved strip at the
+ * bottom of every card that stays empty until that card is the one selected.
+ * Reserved rather than grown, because a card that changes height as the
+ * selection steps through it makes the whole row reflow under a held key -
+ * which is exactly the moment the row has to stay still. Two windows of the
+ * same application are otherwise indistinguishable, and that is the case the
+ * strip exists for.
+ *
+ * One caveat worth knowing before editing this file: the default theme sets
+ *
+ *   .task:focus { outline: 3px solid var(--system-accent-color) !important; }
+ *
+ * and that is the one declaration in this package's reach that cannot be
+ * overridden. Cascade layers reverse for `!important`, so the *earlier* layer
+ * wins - and the default theme is always applied before this one. The focus
+ * ring therefore stays the Windows accent, which is legible on any ground; the
+ * rules below add the surface's own selected fill underneath it rather than
+ * fighting for the outline.
+ */
+
+/*
+ * The full-screen sheet the cards sit on.
+ *
+ * `.task-switcher-overlay` - which this used to name - does not exist in the
+ * host at all, so the entrance never ran and the sheet was never dressed: the
+ * switcher opened as a bare card over a completely untouched desktop, which is
+ * why it read as the one surface with no frost on it. The real structure is
+ * `.task-switcher-window` (the 100vw/100vh window) > `.task-switcher-monitor`
+ * (the centring grid) > `.task-switcher` (the card strip), which is what the
+ * default theme itself targets.
+ */
+.task-switcher-window {
+  animation: rs-fade var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.task-switcher-monitor {
+  background-color: var(--rs-scrim) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+}
+
+.task-switcher {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-overlay-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  box-shadow: var(--rs-shadow-l), var(--rs-highlight) !important;
+  font-family: var(--rs-font) !important;
+  padding: 10px !important;
+  gap: 4px !important;
+  /* A row of 78px cards; capped so the bar wraps at a countable number of
+     them rather than at whatever width the display happens to be. */
+  max-width: min(90vw, 880px) !important;
+  animation: rs-zoom-in var(--rs-dur) var(--rs-ease) both !important;
+}
+
+/* The preview is the whole reason the old card was tall. It goes. */
+.task-preview-container,
+.task-preview,
+.task-no-preview {
+  display: none !important;
+}
+
+.task {
+  position: relative !important;
+  flex: 0 0 auto !important;
+  width: 78px !important;
+  height: 92px !important;
+  padding: 0 !important;
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: calc(var(--rs-row-radius) + 4px) !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  transition: var(--rs-tr) !important;
+  animation: rs-tile-in var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.task:nth-child(2) {
+  animation-delay: var(--rs-step) !important;
+}
+.task:nth-child(3) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+.task:nth-child(4) {
+  animation-delay: calc(var(--rs-step) * 3) !important;
+}
+.task:nth-child(5) {
+  animation-delay: calc(var(--rs-step) * 4) !important;
+}
+.task:nth-child(6) {
+  animation-delay: calc(var(--rs-step) * 5) !important;
+}
+.task:nth-child(7) {
+  animation-delay: calc(var(--rs-step) * 6) !important;
+}
+.task:nth-child(8) {
+  animation-delay: calc(var(--rs-step) * 7) !important;
+}
+.task:nth-child(n + 9) {
+  animation-delay: calc(var(--rs-step) * 8) !important;
+}
+
+/*
+ * Column, not a three-track grid: icon over the title strip, both centred.
+ * The close button is lifted out of the flow entirely, so it cannot push the
+ * icon off-centre and cannot be hit while tabbing past.
+ */
+.task .task-header {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 12px 6px 6px !important;
+  grid-template-columns: none !important;
+}
+
+/*
+ * The logo, at the size the question actually needs. Width and height are set
+ * on the wrapper *and* on what it wraps: depending on the icon the pack
+ * resolved, `.task-icon` is sometimes the image and sometimes a figure around
+ * one, and only one of the two rules fires in either case.
+ */
+.task .task-icon,
+.task .task-header > figure,
+.task .task-header > img {
+  flex: 0 0 auto !important;
+  width: 52px !important;
+  height: 52px !important;
+  margin: 0 !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 3px 6px rgb(0 0 0 / 0.35)) !important;
+  transition:
+    transform var(--rs-dur) var(--rs-ease-pop),
+    filter var(--rs-dur) var(--rs-ease) !important;
+}
+
+.task .task-icon img,
+.task .task-icon svg,
+.task .task-icon figure,
+.task .task-header > figure > img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* The card the key has landed on lifts its logo out of the card. */
+.task:hover .task-icon,
+.task:focus .task-icon,
+.task[aria-selected='true'] .task-icon,
+.task:hover .task-header > figure,
+.task:focus .task-header > figure,
+.task[aria-selected='true'] .task-header > figure {
+  transform: translateY(-3px) scale(1.1) !important;
+  filter: drop-shadow(0 8px 13px rgb(0 0 0 / 0.5)) !important;
+}
+
+/*
+ * The reserved strip. Fixed height so the row never reflows; empty until the
+ * card is selected, which is what keeps the switcher reading as icons.
+ */
+.task-title {
+  width: 100% !important;
+  height: 15px !important;
+  flex: 0 0 15px !important;
+  color: var(--rs-fg) !important;
+  font-size: var(--rs-text-xs) !important;
+  font-weight: 500 !important;
+  line-height: 15px !important;
+  text-align: center !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.5) !important;
+  opacity: 0 !important;
+  transform: translateY(3px) !important;
+  transition:
+    opacity var(--rs-dur-fast) var(--rs-ease),
+    transform var(--rs-dur) var(--rs-ease) !important;
+}
+
+.task:hover .task-title,
+.task:focus .task-title,
+.task[aria-selected='true'] .task-title {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/*
+ * Close: out of the flow, in the corner, and only once the pointer is on the
+ * card. Closing a window is not something Alt+Tab should offer to a key that
+ * is being held down.
+ */
+.task .task-header > button {
+  position: absolute !important;
+  top: 4px !important;
+  right: 4px !important;
+  z-index: 2 !important;
+  width: 17px !important;
+  height: 17px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-pressed) !important;
+  opacity: 0 !important;
+  transform: scale(0.7) !important;
+  transition: var(--rs-tr) !important;
+}
+
+.task:hover .task-header > button {
+  opacity: 1 !important;
+  transform: scale(1) !important;
+}
+
+.task .task-header > button:hover {
+  background-color: var(--color-red-700, #f77) !important;
+  transform: scale(1.12) !important;
+}
+
+/* -------------------------------------------------------------- the card -- */
+
+.task:hover {
+  background-color: var(--rs-hover) !important;
+}
+
+/*
+ * Alt+Tab is held down and stepped through, so the focused card has to be
+ * findable at a glance rather than read for. The fill, the accent edge and a
+ * 6% lift together do what the outline alone does not - and with the preview
+ * gone there is nothing else competing for the eye.
+ */
+.task:focus,
+.task[aria-selected='true'] {
+  background-color: var(--rs-selected) !important;
+  border-color: var(--rs-selected-edge) !important;
+  transform: scale(1.06) !important;
+  box-shadow: var(--rs-shadow) !important;
+}
+
+.task:active {
+  transform: scale(0.94) !important;
+  transition-duration: var(--rs-dur-fast) !important;
+}

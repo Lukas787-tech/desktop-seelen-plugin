@@ -1,0 +1,263 @@
+/*
+ * Shared chrome for module panel contents.
+ *
+ * The panels are small, dense and numerous, and every one of them draws the
+ * same handful of shapes: a scrolling list of rows, a label with a value on the
+ * right, a progress track, a small button. Keeping those here rather than
+ * repeating them in every module's scoped block is what keeps a new module
+ * short - and what stops the fifteenth one drifting a pixel from the first.
+ *
+ * The `m-` prefix is deliberate: this file is global, so a bare `.row` would
+ * also match a `.row` inside a component's own styles.
+ */
+
+/* A module's root: fills the panel body and never spills out of it. */
+/*
+ * Every pad and gap below is multiplied by `--density`, which `appearance.ts`
+ * sets from one setting. A multiplier rather than three hand-written sets of
+ * measurements: a row that is `calc(4px * var(--density))` cannot fall out of
+ * step with the list around it, and a second set of numbers eventually would.
+ */
+.m-body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--density));
+  min-height: 0;
+}
+
+.m-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0 -6px;
+  padding: 0 6px;
+  list-style: none;
+}
+
+.m-row {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--density));
+  padding: calc(4px * var(--density)) calc(6px * var(--density));
+  border-radius: 7px;
+  font-size: 12px;
+  min-width: 0;
+  text-align: left;
+  color: var(--panel-fg);
+  background: transparent;
+  border: 0;
+  font-family: inherit;
+}
+
+/* Rows that do something respond to the pointer; static ones must not. */
+button.m-row,
+.m-row.m-click {
+  width: 100%;
+  cursor: pointer;
+}
+
+button.m-row:hover,
+.m-row.m-click:hover,
+button.m-row:focus-visible {
+  background: color-mix(in oklab, var(--color-gray-300, #666) 26%, transparent);
+}
+
+.m-row.m-active {
+  background: color-mix(in oklab, var(--accent, #7aa2f7) 26%, transparent);
+}
+
+.m-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.m-title,
+.m-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.m-sub {
+  font-size: 10px;
+  color: var(--panel-fg-muted);
+}
+
+.m-value {
+  flex: none;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.m-muted {
+  color: var(--panel-fg-muted);
+}
+
+.m-empty {
+  padding: 6px 0;
+  font-size: 11px;
+  color: var(--panel-fg-muted);
+}
+
+.m-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.m-glyph {
+  flex: none;
+  width: 18px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--panel-fg-muted);
+}
+
+.m-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.m-btn {
+  padding: calc(4px * var(--density)) calc(9px * var(--density));
+  font: inherit;
+  font-size: 11px;
+  border-radius: 7px;
+  border: 0;
+  cursor: pointer;
+  color: var(--panel-fg);
+  background: color-mix(in oklab, var(--color-gray-300, #666) 22%, transparent);
+}
+
+.m-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--color-gray-300, #666) 38%, transparent);
+}
+
+.m-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.m-btn.m-danger {
+  color: var(--color-red-700, #f77);
+}
+
+.m-btn.m-primary {
+  background: color-mix(in oklab, var(--accent, #7aa2f7) 45%, transparent);
+}
+
+/* An icon-only affordance that stays out of the way until the row is hovered. */
+.m-quiet {
+  flex: none;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--panel-fg-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.m-row:hover .m-quiet,
+.m-quiet:focus-visible {
+  opacity: 1;
+}
+
+.m-quiet:hover {
+  color: var(--panel-fg);
+}
+
+.m-bar {
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--color-gray-300, #666) 30%, transparent);
+}
+
+.m-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent, #7aa2f7);
+}
+
+.m-pill {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  color: var(--panel-fg-muted);
+  background: color-mix(in oklab, var(--color-gray-300, #666) 24%, transparent);
+}
+
+.m-pill.m-on {
+  color: var(--panel-fg);
+  background: color-mix(in oklab, var(--accent, #7aa2f7) 40%, transparent);
+}
+
+/* The panel body is not draggable where a module takes input. */
+.m-body input,
+.m-body textarea,
+.m-body select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--panel-fg);
+  border: 0;
+  border-radius: 7px;
+  padding: 5px 8px;
+  background: color-mix(in oklab, var(--color-gray-100, #333) 45%, transparent);
+}
+
+.m-body input[type='range'] {
+  padding: 0;
+  background: transparent;
+  accent-color: var(--accent, #7aa2f7);
+}
+
+/* A checkbox drawn as a switch, matching the settings dialog. */
+.m-switch {
+  flex: none;
+  appearance: none;
+  width: 30px;
+  height: 17px;
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+  background: color-mix(in oklab, var(--color-gray-300, #666) 35%, transparent);
+  transition: background 0.15s ease;
+}
+
+.m-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+
+.m-switch:checked {
+  background: color-mix(in oklab, var(--accent, #7aa2f7) 70%, transparent);
+}
+
+.m-switch:checked::after {
+  transform: translateX(13px);
+}

@@ -1,0 +1,42 @@
+id: "@ralfm/palette"
+icon: PiMagnifyingGlassDuotone
+metadata:
+  displayName: !extend i18n/display_name.yml
+  description: !extend i18n/description.yml
+  tags:
+    - launcher
+    - search
+
+loader: ThirdParty
+preset: Popup
+instances: Single
+
+# Nothing is created until the shortcut fires, and the popup preset closes it
+# again on hide, so an unused palette costs no memory.
+lazy: true
+hidden: false
+
+html: !include index.html
+js: !include index.js
+css: !include index.css
+
+shortcuts:
+  - id: open-palette
+    command: ["widget", "trigger", "@ralfm/palette"]
+    label: Open the command palette
+    # Win+Space is taken by the Windows input-method switcher.
+    defaultKeys: ["Win", "Alt", "Space"]
+
+settings:
+  - group:
+      label: Palette
+      items:
+        - type: number
+          key: maxResults
+          label: Maximum results
+          defaultValue: 9
+        - type: switch
+          key: showActions
+          label: Include quick actions
+          description: Media controls, wallpaper and settings shortcuts.
+          defaultValue: true

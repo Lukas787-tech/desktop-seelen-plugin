@@ -1,0 +1,238 @@
+/*
+ * The taskbar.
+ *
+ * Every declaration here is `!important`, and that is not cargo cult. The host
+ * wraps a theme's CSS in `@layer theme-<id>`, and an unlayered rule beats a
+ * layered one at any specificity - so the widget's own bundled stylesheet wins
+ * every plain declaration a theme makes. `!important` is the only way a theme
+ * reaches these properties at all. It costs nothing against the *default*
+ * theme, which is layered too and carries no `!important` outside the app
+ * switcher's focus ring.
+ */
+
+/*
+ * The bar is the surface's `.panel`, built the only way a layered window can
+ * build one: density, a sheen and a grain tile in place of a frost that has no
+ * backdrop to sample. See the material note in `shared/tokens.css`.
+ *
+ * Seelen paints its own background into `.bg-layers` behind the bar, so those
+ * are cleared first - left alone they sit *over* this ground and the opacity
+ * setting does nothing.
+ */
+.ft-bar {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-bar-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+  font-family: var(--rs-font) !important;
+  font-size: var(--rs-text) !important;
+  transition: background-color var(--rs-dur) var(--rs-ease) !important;
+}
+
+.ft-bar .bg-layers,
+.ft-bar .bg-layer-1,
+.ft-bar .bg-layer-2,
+.ft-bar .ft-bar-bg-layer-1,
+.ft-bar .ft-bar-bg-layer-2 {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+/*
+ * A floating bar is a panel and gets a panel's border and corners. A bar glued
+ * to the display edge is not: three of its four edges are off-screen, so a full
+ * border draws two hairlines that stop in mid-air. It keeps the shadow only.
+ */
+.ft-bar[data-has-margin='true'] {
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+}
+
+.ft-bar:not([data-has-margin='true']) {
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* The bar arrives from the edge it lives on. */
+.ft-bar {
+  animation: rs-drop var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+.ft-bar[data-position='Bottom'] {
+  animation-name: rs-rise !important;
+}
+
+/*
+ * Items are quiet until pointed at, exactly like a module row: no fill, no
+ * border, no shadow of their own. What separates them is the gap Seelen's own
+ * layout already provides.
+ */
+/*
+ * At rest an item is text on the bar and nothing else: no fill, no border, no
+ * shadow, no separator. What divides them is the gap Seelen's own layout
+ * already provides, and what marks the active one is a rule that grows under
+ * it rather than a block of colour behind it.
+ *
+ * That underline is a background-image, not a `::after`. Two reasons: a
+ * pseudo-element on a host element is a guess about markup this theme does not
+ * own - the toolbar already uses `::before` on its items - and `background-size`
+ * transitions, so the rule can be animated in from nothing without a keyframe.
+ */
+.ft-bar-item {
+  color: var(--rs-fg) !important;
+  background-color: transparent !important;
+  background-image: linear-gradient(var(--rs-mark), var(--rs-mark)) !important;
+  background-repeat: no-repeat !important;
+  background-position: bottom center !important;
+  background-size: 0 2px !important;
+  border: 0 !important;
+  border-radius: var(--rs-row-radius) !important;
+  box-shadow: none !important;
+  padding: 0 8px !important;
+  font-size: var(--rs-text) !important;
+  font-variant-numeric: tabular-nums !important;
+  transition:
+    var(--rs-tr),
+    background-size var(--rs-dur) var(--rs-ease) !important;
+}
+
+/*
+ * Hover lifts by a pixel and press pushes back through it. A bar item is small
+ * and has no border of its own, so the movement is what confirms the click -
+ * a colour change alone reads as a hover that happened to stick.
+ */
+.ft-bar-item.ft-bar-item-clickable:hover {
+  background-color: var(--rs-hover) !important;
+  transform: translateY(-1px) !important;
+}
+
+.ft-bar-item.ft-bar-item-clickable:active {
+  background-color: var(--rs-pressed) !important;
+  transform: translateY(0) scale(0.96) !important;
+  transition-duration: var(--rs-dur-fast) !important;
+}
+
+/* Whatever the bar considers "on": the rule sweeps out from the centre. */
+.ft-bar-item.ft-bar-item-active,
+.ft-bar-item.active,
+.ft-bar-item.running,
+.ft-bar-item[data-open='true'] {
+  background-size: 55% 2px !important;
+}
+
+/* Opened into a flyout is a state, not a mark, so it takes the fill. */
+.ft-bar-item[data-open='true'],
+.ft-bar-item.ft-bar-item-context-menu-container {
+  background-color: var(--rs-selected) !important;
+}
+
+/*
+ * Icons inside an item come forward with it. Separated from the item's own
+ * transform so the two compose - the item lifts, the glyph grows.
+ */
+.ft-bar-item .svg-icon,
+.ft-bar-item img,
+.ft-bar-item figure {
+  transition: transform var(--rs-dur) var(--rs-ease-pop) !important;
+}
+
+.ft-bar-item.ft-bar-item-clickable:hover .svg-icon,
+.ft-bar-item.ft-bar-item-clickable:hover img,
+.ft-bar-item.ft-bar-item-clickable:hover figure {
+  transform: scale(1.12) !important;
+}
+
+/*
+ * A bar that hides on overlap slides away rather than blinking out. The host
+ * toggles the class; this is only what the change looks like.
+ */
+.ft-bar.ft-bar-hidden {
+  opacity: 0 !important;
+  transform: translateY(-100%) !important;
+  transition:
+    opacity var(--rs-dur) var(--rs-ease),
+    transform var(--rs-dur) var(--rs-ease) !important;
+}
+
+.ft-bar[data-position='Bottom'].ft-bar-hidden {
+  transform: translateY(100%) !important;
+}
+
+/* An item that was not on the bar a moment ago grows into place. */
+.ft-bar-left > *,
+.ft-bar-center > *,
+.ft-bar-right > * {
+  animation: rs-item-in var(--rs-dur) var(--rs-ease-pop) both !important;
+}
+
+.ft-corner-button {
+  transition: var(--rs-tr) !important;
+}
+
+.ft-corner-button:hover {
+  background-color: var(--rs-hover) !important;
+}
+
+.ft-corner-button:active {
+  background-color: var(--rs-pressed) !important;
+  transform: scale(0.94) !important;
+}
+
+/*
+ * A count, not a control. Smaller and flatter than the default's 12px chip -
+ * on a bar this dense a badge that reads as a button is the loudest thing on
+ * screen, and it is only ever telling you a number.
+ */
+.ft-bar-item-badge {
+  height: 9px !important;
+  min-width: 9px !important;
+  padding: 0 3px !important;
+  background-color: var(--rs-mark) !important;
+  color: var(--color-gray-50, #16161e) !important;
+  border-radius: 999px !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+  line-height: 9px !important;
+  animation: rs-pop-in var(--rs-dur) var(--rs-ease-pop) both !important;
+}
+
+/*
+ * The bar's own separators, quieted to the surface's divider. The default
+ * leaves them at full muted-foreground, which on a bar of eight modules draws
+ * seven vertical lines competing with the content between them.
+ */
+.ft-bar .weg-separator,
+.ft-bar-left > hr,
+.ft-bar-center > hr,
+.ft-bar-right > hr {
+  border-color: var(--rs-divider) !important;
+  background-color: var(--rs-divider) !important;
+  opacity: 0.6 !important;
+}
+
+/*
+ * The bar's own tooltip, and the Ant remnants some items still render through.
+ * Harmless where the markup is absent.
+ */
+.ft-tooltip,
+.ftbr-tooltip,
+.ant-tooltip-inner,
+.ant-popover-inner {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-panel-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-row-radius) !important;
+  box-shadow: var(--rs-shadow), var(--rs-highlight) !important;
+  font-size: var(--rs-text) !important;
+  animation: rs-pop var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.ant-popover-arrow,
+.ant-tooltip-arrow {
+  display: none !important;
+}

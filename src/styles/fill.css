@@ -1,0 +1,14 @@
+/*
+ * Full-display sizing, for widgets that cover a whole monitor.
+ *
+ * Kept out of base.css because popup widgets size themselves to their content:
+ * a forced 100% height there would make the host's autosizer measure the whole
+ * window and never shrink it.
+ */
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}

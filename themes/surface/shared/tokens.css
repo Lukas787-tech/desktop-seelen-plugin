@@ -1,0 +1,848 @@
+/*
+ * The surface's vocabulary, restated for Seelen's own widgets.
+ *
+ * `sharedStyles` is injected into *every* widget that opts into theming -
+ * including this package's own `@ralfm/desktop` and `@ralfm/palette` - so this
+ * file holds custom properties and `@keyframes` and nothing else. Neither
+ * paints anything on its own: no selector here matches a host element, and an
+ * unreferenced keyframe costs nothing, which is what makes it safe to define
+ * the motion set once instead of twenty-one times. The painting lives in
+ * `styles/`, one file per widget id.
+ *
+ * Every keyframe is `rs-` prefixed for the same reason: this stylesheet lands
+ * in documents that already have keyframes of their own.
+ *
+ * Everything below is derived from the knobs in `metadata.yml`, which the host
+ * registers with `@property` and the user can retune in Seelen's settings.
+ *
+ * Colours come from Seelen's contrast-adaptive `--color-*` scale rather than
+ * literal values, for the same reason the surface uses it - `gray-50` is the
+ * ground and `gray-900` the ink in either polarity, so one set of rules works
+ * in light and dark without a media query. Each carries a fallback, as
+ * `src/styles/base.css` does: a token that has not arrived yet makes the whole
+ * declaration invalid rather than merely wrong, and a panel with a
+ * guaranteed-invalid background is a panel with no background at all.
+ *
+ * The same rule applies to every knob read below that was added after the
+ * first release: each `var()` of one carries its initial value as a fallback,
+ * because a theme newer than the running session has its settings unregistered
+ * until Seelen restarts, and an unregistered knob is not its initial value - it
+ * is nothing.
+ */
+
+/* ----------------------------------------------------------------- palette -- */
+
+/*
+ * The five presets.
+ *
+ * A preset changes two things and no more: the hue mixed into the glass, and
+ * the colour a selection is tinted with. Everything else - density, corner,
+ * blur, motion, and every structural mark - stays on its own knob, so a preset
+ * never undoes a setting the user has chosen and any preset can be tuned
+ * without leaving it.
+ *
+ * A preset is a hue and an amount of chroma, not a colour to blend in, and
+ * that distinction is the whole reason the glass stays glass.
+ * `--color-gray-50` is Seelen's contrast-adaptive *ground* - light in a light
+ * theme, dark in a dark one - so mixing any fixed colour into it moves its
+ * lightness as well as its hue, and the tinted presets end up visibly thinner
+ * than the neutral one. (Measured: mixing 14% of a mid blue took the ground
+ * from L 0.204 to L 0.254, a quarter lighter.) Relative colour syntax takes
+ * the ground's own `l` untouched, adds chroma, and sets the hue - so switching
+ * preset changes the colour of the glass and nothing else about it.
+ *
+ * The mechanism is a style query. The host writes the user's choice into
+ * `:root` (in its own, later cascade layer), and these blocks read it from
+ * there and apply the palette to `body` - which is why the colour tokens below
+ * live on `body` and the rest stay on `:root`. A style query cannot match the
+ * element that carries the value, only its descendants.
+ *
+ * The option values are quoted on purpose. The host registers this setting as
+ * `syntax: "<string>"`, and a bare `midnight` is an ident, not a string: it
+ * fails to parse, falls back to the initial value, and every preset silently
+ * does nothing. Measured, not assumed.
+ */
+/*
+ * Monochrome's hue is the keyword `h`, not a number. Custom properties
+ * substitute as tokens, so `var(--rs-hue)` drops the literal `h` into the
+ * `oklch(from ...)` and the ground keeps its own hue untouched. A `0` there
+ * would instead *rotate* whatever residual chroma the ground already carries
+ * round to red - a faint warm cast on the one preset whose whole job is not
+ * to have a cast.
+ */
+body {
+  --rs-hue: h;
+  --rs-chroma: 0;
+  --rs-preset-accent: #000000;
+}
+
+@container style(--rs-preset: 'midnight') {
+  body {
+    --rs-hue: 264;
+    --rs-chroma: 0.042;
+    --rs-preset-accent: #5b8dd9;
+  }
+}
+
+@container style(--rs-preset: 'ember') {
+  body {
+    --rs-hue: 58;
+    --rs-chroma: 0.04;
+    --rs-preset-accent: #d99455;
+  }
+}
+
+@container style(--rs-preset: 'moss') {
+  body {
+    --rs-hue: 155;
+    --rs-chroma: 0.038;
+    --rs-preset-accent: #6fae86;
+  }
+}
+
+@container style(--rs-preset: 'orchid') {
+  body {
+    --rs-hue: 310;
+    --rs-chroma: 0.042;
+    --rs-preset-accent: #a98adb;
+  }
+}
+
+/*
+ * An unset accent means "whatever the preset says". The knob is registered
+ * with `transparent` as its initial value, so this is the one case a style
+ * query can tell apart - a colour the user has actually picked is never
+ * transparent, and leaving the field empty puts it back under the preset's
+ * control without needing a second "use preset" switch.
+ */
+@container style(--rs-accent: transparent) {
+  body {
+    --rs-accent: var(--rs-preset-accent);
+  }
+}
+
+/*
+ * The colour the glass is made of.
+ *
+ * Normally the preset's ground, which is a fixed near-black with the preset's
+ * hue in it. But a desktop panel is not made of a fixed colour at all: it is
+ * 24% of that ground over a *blurred wallpaper*, so what it actually shows is
+ * mostly wallpaper, averaged - pale blue over a moonlit scene, warm over a
+ * sunset, and different again when the wallpaper changes. A dock cannot blur,
+ * so at the fill a non-blurring panel needs, the ground is all you see: a solid
+ * brown or navy bar beside panels that are neither. That, and not the texture,
+ * is why every earlier attempt to match the two by tuning the frost failed.
+ *
+ * So `@ralfm/desktop` measures the colour its own panels are showing and sends
+ * it here, and the glass is made of that. Same wallpaper, same average, same
+ * material - by construction rather than by tuning. `transparent` means no
+ * widget is sending one, and the ground stands in.
+ */
+body {
+  /* The fallback is not decoration. If the host has not yet registered this
+     property - a theme whose metadata is newer than the running session - the
+     variable is unset rather than `transparent`, the style query below cannot
+     match it, and a bare `var(--rs-tint)` would resolve to nothing. That makes
+     every `color-mix` built on it invalid, which takes the fill off every
+     panel in the shell at once. */
+  --rs-glass: var(--rs-tint, var(--rs-ground));
+}
+
+@container style(--rs-tint: transparent) {
+  body {
+    --rs-glass: var(--rs-ground);
+  }
+}
+
+/*
+ * The glass itself: the adaptive ground, carrying the preset's hue. Every
+ * panel in the theme is some opacity of this one colour, which is what keeps a
+ * dock, a popup and the start menu recognisably the same material.
+ */
+body {
+  --rs-ground: oklch(from var(--color-gray-50, #16161e) l calc(c + var(--rs-chroma)) var(--rs-hue));
+
+  --rs-bar-bg: color-mix(in oklab, var(--rs-glass) calc(var(--rs-bar-opacity) * 1%), transparent);
+  --rs-panel-bg: color-mix(in oklab, var(--rs-glass) calc(var(--rs-panel-opacity) * 1%), transparent);
+  --rs-overlay-bg: color-mix(in oklab, var(--rs-glass) calc(var(--rs-overlay-opacity) * 1%), transparent);
+
+  /* Selection carries the accent, so it is resolved here too - see the note
+     on `--rs-selected` below for why it mixes rather than replaces. */
+  --rs-selected: color-mix(in oklab, var(--rs-accent) 24%, var(--rs-pressed));
+  --rs-selected-strong: color-mix(in oklab, var(--rs-accent) 40%, var(--rs-pressed));
+
+  /*
+   * ------------------------------------------------------------------- frost
+   *
+   * The sheen and the grain, both scaled by one strength. They live here
+   * rather than on `:root` for the same reason the palette does: the grain is
+   * switched off by a style query, and a style query cannot match the element
+   * carrying the value it tests.
+   *
+   * The sheen scales continuously, because an alpha can be a `calc()`. The
+   * grain cannot - its opacity is baked into the inlined SVG, and a data URI
+   * is opaque to CSS - so it is present or absent, switched at exactly zero.
+   * That is the honest division: one knob, continuous where the medium allows
+   * it and binary where it does not, rather than a second knob pretending the
+   * two behave alike.
+   */
+  --rs-frost-k: calc(var(--rs-frost) / 100);
+
+  /*
+   * Four stops rather than three. The light on a pane of glass does not fall
+   * off linearly: it is bright at the lit edge, drops away quickly, runs flat
+   * through the middle, and gathers weight at the far edge. Three stops draw a
+   * straight ramp through that, which reads as a gradient painted on a
+   * rectangle - the sheen and the shape of the sheen are doing opposite jobs.
+   * The knee at 34% and the flat run to 74% are what make it read as light
+   * across a surface instead.
+   */
+  --rs-sheen: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / calc(0.1 * var(--rs-frost-k))) 0%,
+    rgb(255 255 255 / calc(0.032 * var(--rs-frost-k))) 34%,
+    rgb(0 0 0 / calc(0.026 * var(--rs-frost-k))) 74%,
+    rgb(0 0 0 / calc(0.075 * var(--rs-frost-k))) 100%
+  );
+
+  /*
+   * One 120px tile of fractal noise, inlined so it costs no request. It is
+   * what stops a flat translucent fill reading as a coloured rectangle - the
+   * single biggest difference between this and the version of the theme that
+   * only set `background-color`.
+   *
+   * Down from 9%, and one octave coarser, because both of those were set while
+   * the fill underneath was far too thin. Noise cannot hide detail; it can
+   * only sit on top of it. Over a sharp wallpaper showing through a 24% fill,
+   * 9% of near-per-pixel static read as dirt on the screen rather than as
+   * texture in a surface - and turning the strength up, which is the obvious
+   * thing to try, only made it dirtier. With `occludingFill` now giving the
+   * fill something to be a texture *on*, the grain can be what it should be:
+   * quiet, and slightly larger than a pixel so it reads as matte rather than
+   * as noise.
+   */
+  --rs-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+
+  /*
+   * A wash of the same glass, for the full-screen sheet an overlay puts over
+   * the desktop. Light enough to read the desktop through and heavy enough to
+   * be a surface rather than a tint - it carries the sheen and grain too, so
+   * Alt+Tab dims behind its cards the way the start menu does behind its grid.
+   */
+  --rs-scrim: color-mix(in oklab, var(--rs-glass) calc(var(--rs-overlay-opacity) * 0.42%), transparent);
+
+  /*
+   * The edges of a pane of glass. Beside the strength they scale with, for the
+   * reason given where the first one used to be.
+   *
+   * Three parts, because an edge is where the material stops pretending to be
+   * a fill and has to look like it has thickness: a lit line along the top, a
+   * much fainter one along the bottom where light wraps round the far face,
+   * and a short inner shade under the top line. That shade is the part that
+   * reads as depth - without it the lit line looks like a border, with it the
+   * panel looks like something the light is falling *on*.
+   */
+  --rs-highlight:
+    inset 0 1px 0 rgb(255 255 255 / calc(0.17 * var(--rs-frost-k))),
+    inset 0 -1px 0 rgb(255 255 255 / calc(0.045 * var(--rs-frost-k))),
+    inset 0 7px 10px -9px rgb(0 0 0 / calc(0.3 * var(--rs-frost-k)));
+}
+
+/* Frost off: the gradient is already transparent at zero, the tile is not. */
+@container style(--rs-frost: 0) {
+  body {
+    --rs-grain: none;
+  }
+}
+
+:root {
+  /* Ink. */
+  --rs-fg: var(--color-gray-900, #eee);
+  --rs-fg-muted: var(--color-gray-600, #999);
+
+  /* Elevation, restated once so the widget files do not repeat the fallback. */
+  --rs-shadow: var(--shadow-m, 2px 2px 8px rgb(0 0 0 / 0.24));
+  --rs-shadow-l: var(--shadow-l, 8px 8px 24px rgb(0 0 0 / 0.34));
+
+  /*
+   * Three grounds rather than one - defined on `body` above, because they
+   * carry the preset's tint. The surface itself is not uniform either: its
+   * module panels sit at the user's opacity over the wallpaper, its menus at
+   * 72%, its command palette at 82% - a list of words wants more backing than
+   * a bar of icons does. The three tiers keep that relationship while still
+   * moving together when the one opacity knob is turned.
+   *
+   * They all read heavier than the surface's equivalents, and deliberately;
+   * see the note on the material below.
+   */
+
+  /*
+   * ---------------------------------------------------------------- material
+   *
+   * Why these panels are not simply "the same numbers as the surface".
+   *
+   * `backdrop-filter` cannot work on the root panel of a Seelen widget. Each
+   * of them is its own transparent, layered window, and the filter samples the
+   * backdrop *within the document* - the wallpaper is a different window
+   * entirely, so there is nothing there to blur. The surface's own panels are
+   * the exception that makes this confusing: `@ralfm/desktop` draws the
+   * wallpaper itself, in the same document, which is why its `blur(12px)`
+   * produces real frost while the identical declaration on a dock is a no-op.
+   * Seelen's own default theme gives the game away - it uses `backdrop-filter`
+   * exactly once, on `.weg-item-preview:hover`, which is the one surface that
+   * does have page content behind it.
+   *
+   * So the frost is reconstructed from what a layered window *can* draw. A
+   * frosted panel differs from a flat tint in three measurable ways: it is
+   * denser, it catches light unevenly across its height, and it has grain.
+   * Hence a higher fill, a sheen gradient, and a noise tile - and an inner top
+   * highlight, which is the edge where a real pane of glass catches the light.
+   *
+   * `--rs-backdrop` is still applied to the handful of surfaces that *do* have
+   * page content behind them (a folder modal over the start menu, a card over
+   * a popup's own ground), where it is real.
+   */
+  /* `--rs-highlight` is *not* here - it reads `--rs-frost-k`, which is on
+     `body`, and a custom property resolves against the element it is declared
+     on. Declared here it computes to nothing, and a `box-shadow` built from it
+     is invalid as a whole - which took every shell panel's shadow with it. */
+
+  /* The hairline around a panel, and the quieter one between its rows. */
+  --rs-line: color-mix(in oklab, var(--color-gray-300, #666) calc(var(--rs-edge) * 1%), transparent);
+  --rs-divider: color-mix(in oklab, var(--color-gray-300, #666) 26%, transparent);
+
+  /*
+   * Row states, lifted from `modules.css` and `MenuList.svelte` so a Seelen
+   * menu row and a module row light up by the same amount.
+   */
+  --rs-hover: color-mix(in oklab, var(--color-gray-300, #666) 26%, transparent);
+  --rs-pressed: color-mix(in oklab, var(--color-gray-300, #666) 38%, transparent);
+
+  /*
+   * Selection is the pressed grey *plus* a wash of the accent, not the accent
+   * alone - resolved on `body` above, with the palette. Two reasons, and they
+   * are the same reason from either end:
+   *
+   *  - the Monochrome preset's accent is black, and 26% of black over a dark
+   *    panel is not a selection, it is a slightly darker panel;
+   *  - a theme that paints selection in a colour the surface never uses is a
+   *    theme that does not match it, which is what a blue ring on the search
+   *    field was.
+   *
+   * Mixing into `--rs-pressed` guarantees a selected thing is at least as
+   * visible as a pressed one at any accent, and tints rather than replaces
+   * when the accent is a colour.
+   */
+
+  /*
+   * The ink, for anything that has to be seen as a *shape* rather than as a
+   * tint: an edge, a marker, a badge, a focus ring. A translucent wash can
+   * afford to take the accent because it sits over a known ground; three
+   * solid pixels cannot, because at a near-black accent they simply are not
+   * there. The accent tints, the ink marks.
+   */
+  --rs-mark: var(--rs-fg);
+  --rs-selected-edge: color-mix(in oklab, var(--rs-fg) 45%, transparent);
+
+  /* An icon tile over a wallpaper takes a heavier hover than a text row. */
+  --rs-tile-hover: color-mix(in oklab, var(--color-gray-500, #888) 22%, transparent);
+
+  /* Controls: a text field, a small button, a pill. */
+  --rs-field: color-mix(in oklab, var(--color-gray-100, #333) 45%, transparent);
+  --rs-chip: color-mix(in oklab, var(--color-gray-300, #666) 22%, transparent);
+  --rs-chip-hover: color-mix(in oklab, var(--color-gray-300, #666) 38%, transparent);
+
+  /*
+   * A row's corner is a proportion of the panel's, not a second setting: the
+   * surface pairs 14px panels with 7px rows and 16px palettes with 9px rows.
+   * Clamped because the ratio stops reading as a radius below ~6px and starts
+   * reading as a pill above ~12px.
+   */
+  --rs-row-radius: clamp(6px, calc(var(--rs-radius) * 0.55), 12px);
+
+  /*
+   * The blur for the few layers that have a backdrop.
+   *
+   * This used to be called `--rs-glass`, which is also the name of the glass
+   * *colour* on `body` above. Every element that used it is inside `body`, so
+   * every one of them inherited the colour, and `backdrop-filter: <a colour>`
+   * is invalid - the folder modal, the select picker and the workspace shelf
+   * had never had their blur. Two meanings, one name; renamed rather than
+   * reordered, because no ordering of the two declarations makes both right.
+   */
+  --rs-backdrop: blur(var(--rs-blur));
+
+  /*
+   * One stack, so a Seelen popup and a module panel set type the same way.
+   * The chosen family leads and the platform stack follows it, so a font that
+   * lacks a glyph still falls through to one that has it.
+   *
+   * The inner fallback is not belt-and-braces: CSS's `@property` grammar has
+   * no `<family-name>`. Seelen's settings schema offers that syntax and the
+   * host duly emits it, but the browser rejects the registration, the property
+   * computes to nothing, and a bare `var(--rs-font-family)` takes the whole
+   * declaration down with it - every panel in the shell dropping to the
+   * browser's default serif. Measured; the fallback is what makes the setting
+   * safe to leave unset.
+   */
+  --rs-font: var(--rs-font-family, var(--font-family, 'Segoe UI Variable Text')),
+    'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+
+  /*
+   * Three sizes, all proportions of the one setting, so the shell scales as a
+   * whole. The ratios are the ones the theme was written at - 12/11/10 against
+   * a 14px base - which is why they are not round numbers.
+   */
+  --rs-text: calc(var(--rs-font-size) * 0.86);
+  --rs-text-sm: calc(var(--rs-font-size) * 0.79);
+  --rs-text-xs: calc(var(--rs-font-size) * 0.72);
+}
+
+/* ------------------------------------------------------------------ motion -- */
+
+/*
+ * Four durations, three curves and a stagger step, scaled by one `--rs-motion`
+ * multiplier so the whole shell speeds up, slows down or stops from a single
+ * slider - and shaped by one `--rs-motion-style`, which swaps the curves and
+ * how far things travel without touching anything else.
+ *
+ * These live on `body`, not `:root`, for the reason the palette does: a style
+ * swaps them, a style is a style query, and a style query cannot match the
+ * element carrying the value it tests. They used to be on `:root`, which was
+ * right while there was nothing to switch.
+ *
+ * The *composites* (`--rs-dur*`, `--rs-tr`) have to be declared on `body` as
+ * well, not merely read there. A custom property's `var()`s are substituted
+ * where it is declared: a `--rs-tr` composed on `:root` would bake in `:root`'s
+ * curve and never see the one a style put on `body`.
+ *
+ * `--rs-step` is one stagger increment: a list that animates in multiplies it
+ * by the row's index, which is why the delays are written out as `:nth-child`
+ * rules rather than inherited - CSS has no counter to multiply.
+ *
+ * The curves, in the default Fluid style:
+ *
+ * `--rs-ease` is an exponential ease-out: almost all of the distance is
+ * covered in the first third of the duration, then it glides into place. That
+ * is what reads as fluid rather than merely animated - the response feels
+ * immediate even though the movement lasts longer than a linear curve would
+ * tolerate, which is why these durations can be generous without the shell
+ * feeling slow. A symmetric curve would make a menu look like it is deciding
+ * whether to open.
+ *
+ * `--rs-ease-pop` overshoots, for things that appear from nothing.
+ * `--rs-ease-move` is the curve a *transform* transitions on - a hover lift, a
+ * card stepping forward - kept separate from colour so a springy style can
+ * bounce the movement without making a fill flicker past its target.
+ * `--rs-ease-smooth` is the only curve here with any ease-in, and is for
+ * movement that is continuous rather than triggered - a marker sliding between
+ * positions, a value bar tracking a number.
+ *
+ * `--rs-travel` scales how far an entrance comes from - the 10px of a rise,
+ * the 4% of a pop - and `--rs-pace` scales the durations on top of the user's
+ * speed, so a style can be quicker or lazier without the speed slider's 1
+ * meaning something different under each.
+ */
+body {
+  --rs-pace: 1;
+  --rs-travel: 1;
+
+  --rs-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --rs-ease-pop: cubic-bezier(0.34, 1.45, 0.5, 1);
+  --rs-ease-move: cubic-bezier(0.16, 1, 0.3, 1);
+  --rs-ease-smooth: cubic-bezier(0.45, 0, 0.15, 1);
+}
+
+/*
+ * Spring: real damped-spring curves rather than a bezier imitating one.
+ *
+ * `linear()` takes a list of progress values and joins them, which is enough to
+ * draw any curve - including one that goes past 1 and comes back, more than
+ * once, which no `cubic-bezier` can. Each list below is the step response of a
+ * spring (ζ 0.72 for `--rs-ease`, ζ 0.6 for the others, ω 12), sampled at 41
+ * points from rest until it settles within 0.2%. Regenerate rather than hand-
+ * edit: a point nudged by eye is a spring that no longer settles.
+ *
+ * Overshooting colour and opacity is harmless - both clamp - so the plain
+ * ease is sprung too, and every entrance in the shell lands with a little
+ * weight. `--rs-pace` is longer because a spring spends its tail settling, and
+ * squeezed into the Fluid durations that tail becomes a shiver.
+ */
+@container style(--rs-motion-style: 'spring') {
+  body {
+    --rs-pace: 1.6;
+    --rs-travel: 1.15;
+    --rs-ease: linear(0, 0.016, 0.058, 0.12, 0.193, 0.274, 0.358, 0.442, 0.523, 0.6, 0.671, 0.735, 0.792, 0.842, 0.885, 0.921, 0.951, 0.976, 0.995, 1.01, 1.022, 1.029, 1.035, 1.037, 1.038, 1.038, 1.037, 1.034, 1.032, 1.028, 1.025, 1.022, 1.019, 1.016, 1.013, 1.011, 1.008, 1.006, 1.005, 1.003, 1);
+    --rs-ease-pop: linear(0, 0.027, 0.098, 0.198, 0.314, 0.436, 0.556, 0.669, 0.77, 0.857, 0.93, 0.987, 1.031, 1.062, 1.081, 1.092, 1.095, 1.092, 1.085, 1.076, 1.065, 1.053, 1.042, 1.031, 1.022, 1.013, 1.007, 1.001, 0.997, 0.994, 0.992, 0.991, 0.991, 0.991, 0.992, 0.993, 0.994, 0.995, 0.996, 0.997, 1);
+    --rs-ease-move: linear(0, 0.027, 0.098, 0.198, 0.314, 0.436, 0.556, 0.669, 0.77, 0.857, 0.93, 0.987, 1.031, 1.062, 1.081, 1.092, 1.095, 1.092, 1.085, 1.076, 1.065, 1.053, 1.042, 1.031, 1.022, 1.013, 1.007, 1.001, 0.997, 0.994, 0.992, 0.991, 0.991, 0.991, 0.992, 0.993, 0.994, 0.995, 0.996, 0.997, 1);
+  }
+}
+
+/* Snappy: a third quicker, a little over half the distance, a sharper knee. */
+@container style(--rs-motion-style: 'snappy') {
+  body {
+    --rs-pace: 0.65;
+    --rs-travel: 0.6;
+    --rs-ease: cubic-bezier(0.2, 0.9, 0.1, 1);
+    --rs-ease-pop: cubic-bezier(0.3, 1.3, 0.5, 1);
+    --rs-ease-move: cubic-bezier(0.2, 0.9, 0.1, 1);
+  }
+}
+
+/* Gentle: longer and further, with the overshoot all but gone. */
+@container style(--rs-motion-style: 'gentle') {
+  body {
+    --rs-pace: 1.45;
+    --rs-travel: 1.3;
+    --rs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --rs-ease-pop: cubic-bezier(0.25, 1.15, 0.4, 1);
+    --rs-ease-move: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+body {
+  --rs-dur-fast: calc(130ms * var(--rs-motion) * var(--rs-pace));
+  --rs-dur: calc(220ms * var(--rs-motion) * var(--rs-pace));
+  --rs-dur-slow: calc(340ms * var(--rs-motion) * var(--rs-pace));
+  --rs-step: calc(30ms * var(--rs-motion) * var(--rs-pace) * var(--rs-stagger, 1));
+
+  /* The entrance blur, as a length, so the keyframes need not each convert. */
+  --rs-enter-blur: calc(var(--rs-entrance-blur, 3) * 1px);
+
+  /*
+   * What almost every interactive element transitions, written once.
+   *
+   * Colour settles faster than shape on purpose: a fill that lingers as long
+   * as the movement reads as a lag, while a transform that resolves as fast as
+   * the fill reads as a snap. The split is most of what makes a hover feel
+   * like one gesture instead of two.
+   */
+  --rs-tr: background-color var(--rs-dur-fast) var(--rs-ease),
+    border-color var(--rs-dur-fast) var(--rs-ease), color var(--rs-dur-fast) var(--rs-ease),
+    box-shadow var(--rs-dur) var(--rs-ease), opacity var(--rs-dur-fast) var(--rs-ease),
+    filter var(--rs-dur) var(--rs-ease), transform var(--rs-dur) var(--rs-ease-move);
+}
+
+/* ------------------------------------------------------------ start button -- */
+
+/*
+ * The dock's start button, drawn by the theme instead of by an icon pack.
+ *
+ * The glyph is a mask and the colour is a background, which is what lets one
+ * shape take any colour, a gradient finish, and the preset's accent - an
+ * `<img>` from an icon pack can only ever be the picture it is. The masks are
+ * 24px SVGs inlined as data URIs, like the grain, so they cost no request.
+ *
+ * "Icon pack" hands the button back: no mask, no paint, and the pack's own
+ * image shown again. That is also the fallback that matters most - the values
+ * here are the Surface glyph, so a session that has not registered the knob
+ * still gets a drawn button rather than an invisible one.
+ */
+body {
+  --rs-start-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='2' width='9' height='9' rx='2.6'/%3E%3Ccircle cx='17.5' cy='6.5' r='4.5'/%3E%3Crect x='2' y='13' width='9' height='9' rx='2.6'/%3E%3Crect x='13' y='13' width='9' height='9' rx='2.6'/%3E%3C/svg%3E");
+  --rs-start-img: 0;
+
+  /* Transparent means "the ink", exactly as the accent override means "the
+     preset" - see `--rs-accent` above for why that sentinel works. */
+  --rs-start-ink: var(--rs-start-color, var(--rs-fg));
+  --rs-start-paint: linear-gradient(var(--rs-start-ink), var(--rs-start-ink));
+
+  /* What hovering does: a transform, an optional looping animation, and how
+     far the glow behind the glyph grows. */
+  --rs-start-turn: rotate(90deg) scale(1.08);
+  --rs-start-loop: none;
+  --rs-start-bloom: 1.1;
+}
+
+@container style(--rs-start-color: transparent) {
+  body {
+    --rs-start-ink: var(--rs-fg);
+  }
+}
+
+@container style(--rs-start-icon: 'orbit') {
+  body {
+    --rs-start-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='7.6' fill='none' stroke='%23000' stroke-width='2.4'/%3E%3Ccircle cx='12' cy='12' r='3.2'/%3E%3Ccircle cx='18.6' cy='5.4' r='3'/%3E%3C/svg%3E");
+  }
+}
+
+@container style(--rs-start-icon: 'petal') {
+  body {
+    --rs-start-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 11.2C8.6 9 8.2 4.6 12 1.6c3.8 3 3.4 7.4 0 9.6z'/%3E%3Cpath transform='rotate(90 12 12)' d='M12 11.2C8.6 9 8.2 4.6 12 1.6c3.8 3 3.4 7.4 0 9.6z'/%3E%3Cpath transform='rotate(180 12 12)' d='M12 11.2C8.6 9 8.2 4.6 12 1.6c3.8 3 3.4 7.4 0 9.6z'/%3E%3Cpath transform='rotate(270 12 12)' d='M12 11.2C8.6 9 8.2 4.6 12 1.6c3.8 3 3.4 7.4 0 9.6z'/%3E%3C/svg%3E");
+  }
+}
+
+@container style(--rs-start-icon: 'spark') {
+  body {
+    --rs-start-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5c.9 5.6 4.9 9.6 10.5 10.5-5.6.9-9.6 4.9-10.5 10.5C11.1 16.9 7.1 12.9 1.5 12 7.1 11.1 11.1 7.1 12 1.5z'/%3E%3C/svg%3E");
+  }
+}
+
+@container style(--rs-start-icon: 'windows') {
+  body {
+    --rs-start-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2.5' y='2.5' width='9' height='9' rx='1.4'/%3E%3Crect x='12.5' y='2.5' width='9' height='9' rx='1.4'/%3E%3Crect x='2.5' y='12.5' width='9' height='9' rx='1.4'/%3E%3Crect x='12.5' y='12.5' width='9' height='9' rx='1.4'/%3E%3C/svg%3E");
+  }
+}
+
+@container style(--rs-start-icon: 'pack') {
+  body {
+    --rs-start-mask: none;
+    --rs-start-paint: none;
+    --rs-start-img: 1;
+  }
+}
+
+/*
+ * Finishes. Glass lights the glyph from the top-left and shades it toward the
+ * far corner, the way the panels' sheen does; duotone runs the ink into the
+ * preset's accent. Both are built on `--rs-start-ink`, so a chosen colour
+ * carries through either.
+ */
+@container style(--rs-start-finish: 'glass') {
+  body {
+    --rs-start-paint: linear-gradient(
+      150deg,
+      color-mix(in oklab, var(--rs-start-ink), white 38%) 0%,
+      var(--rs-start-ink) 52%,
+      color-mix(in oklab, var(--rs-start-ink), black 30%) 100%
+    );
+  }
+}
+
+@container style(--rs-start-finish: 'duotone') {
+  body {
+    --rs-start-paint: linear-gradient(
+      135deg,
+      var(--rs-start-ink) 15%,
+      color-mix(in oklab, var(--rs-accent, #d99455) 85%, var(--rs-start-ink)) 90%
+    );
+  }
+}
+
+/* Re-asserted after the finishes, because a finish must not repaint the pack. */
+@container style(--rs-start-icon: 'pack') {
+  body {
+    --rs-start-paint: none;
+  }
+}
+
+@container style(--rs-start-hover: 'tilt') {
+  body {
+    --rs-start-turn: rotate(-12deg) scale(1.12);
+  }
+}
+
+@container style(--rs-start-hover: 'pulse') {
+  body {
+    --rs-start-turn: scale(1.04);
+    --rs-start-loop: rs-beat;
+  }
+}
+
+@container style(--rs-start-hover: 'bloom') {
+  body {
+    --rs-start-turn: scale(1.16);
+    --rs-start-bloom: 1.45;
+  }
+}
+
+@container style(--rs-start-hover: 'none') {
+  body {
+    --rs-start-turn: none;
+    --rs-start-bloom: 1;
+  }
+}
+
+/*
+ * The durations are zeroed rather than `--rs-motion`, because the user's value
+ * for that knob is written by the host into a *later* cascade layer than this
+ * file and would win. Nothing sets these four, so this is the last word on
+ * them - which is also why this block comes after every style above: a style
+ * sets the pace, and reduced motion has to outrank whatever pace was chosen.
+ *
+ * Seelen's performance mode is already handled by the host, which injects an
+ * unlayered `!important` rule that outranks every theme - see `setPerformanceStyles`.
+ */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    --rs-dur-fast: 0ms;
+    --rs-dur: 0ms;
+    --rs-dur-slow: 0ms;
+    --rs-step: 0ms;
+    --rs-enter-blur: 0px;
+    --rs-start-loop: none;
+  }
+}
+
+/* ------------------------------------------------------------- focus ring -- */
+
+/*
+ * The one rule in this file that paints, and the exception is argued rather
+ * than assumed.
+ *
+ * Seelen's shared stylesheet sets `*:focus-visible { outline-color:
+ * var(--system-accent-color) }` - the *Windows* accent, which on a default
+ * install is blue. That is the blue that appeared around the start menu's
+ * search field, and no per-widget rule can be the right place to fix it:
+ * it is one global declaration and it needs one global answer.
+ *
+ * It belongs here rather than repeated through nine widget files because
+ * `sharedStyles` is applied in a layer *after* the default theme's shared
+ * layer, so a plain declaration already wins - no `!important`, which is what
+ * keeps it safe for this package's own two widgets, whose unlayered CSS
+ * continues to outrank it.
+ */
+*:focus-visible {
+  outline-color: var(--rs-selected-edge);
+}
+
+/* --------------------------------------------------------------- keyframes -- */
+
+/*
+ * Distances are multiples of `--rs-travel`, so a motion style can make every
+ * entrance come from nearer or further without restating a keyframe.
+ *
+ * Panels - the things that arrive whole - also come *into focus*, from
+ * `--rs-enter-blur`. Tiles and rows do not: a start menu deals forty of them at
+ * once, and forty animated filters is a cost a 220ms flourish does not earn.
+ * The blur is on the one surface the eye is actually following.
+ */
+
+@keyframes rs-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* For a panel that belongs to an edge: it arrives from that edge. */
+@keyframes rs-rise {
+  from {
+    opacity: 0;
+    transform: translateY(calc(10px * var(--rs-travel, 1)));
+    filter: blur(var(--rs-enter-blur, 0px));
+  }
+}
+
+@keyframes rs-drop {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-10px * var(--rs-travel, 1)));
+    filter: blur(var(--rs-enter-blur, 0px));
+  }
+}
+
+@keyframes rs-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(calc(24px * var(--rs-travel, 1)));
+    filter: blur(var(--rs-enter-blur, 0px));
+  }
+}
+
+/* For a panel that belongs to a point: it grows out of it. */
+@keyframes rs-pop {
+  from {
+    opacity: 0;
+    transform: scale(calc(1 - 0.04 * var(--rs-travel, 1)));
+    filter: blur(var(--rs-enter-blur, 0px));
+  }
+}
+
+/*
+ * The start menu's own entrances. A 560px panel has further to come than a
+ * popover, so a rise that reads on a 300px menu barely registers on it; these
+ * travel nearly three times as far and shed a little scale on the way.
+ */
+@keyframes rs-surge {
+  from {
+    opacity: 0;
+    transform: translateY(calc(28px * var(--rs-travel, 1))) scale(calc(1 - 0.03 * var(--rs-travel, 1)));
+    filter: blur(var(--rs-enter-blur, 0px));
+  }
+}
+
+@keyframes rs-descend {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-28px * var(--rs-travel, 1))) scale(calc(1 - 0.03 * var(--rs-travel, 1)));
+    filter: blur(var(--rs-enter-blur, 0px));
+  }
+}
+
+/* A count or a dot that was not there a moment ago. */
+@keyframes rs-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+/* One card or tile in a list that animates in as a group. */
+@keyframes rs-tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(8px * var(--rs-travel, 1))) scale(calc(1 - 0.03 * var(--rs-travel, 1)));
+  }
+}
+
+@keyframes rs-item-in {
+  from {
+    opacity: 0;
+    transform: scale(calc(1 - 0.4 * min(var(--rs-travel, 1), 1.5)));
+  }
+}
+
+/* The marker under the window that currently has focus. */
+@keyframes rs-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes rs-spin {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+/*
+ * A heartbeat on the individual `scale` property rather than on `transform`,
+ * so it multiplies with whatever transform the hover already applied instead
+ * of replacing it.
+ */
+@keyframes rs-beat {
+  0%,
+  100% {
+    scale: 1;
+  }
+  18% {
+    scale: 1.1;
+  }
+  34% {
+    scale: 0.98;
+  }
+  50% {
+    scale: 1.06;
+  }
+}
+
+/*
+ * A layer that takes the whole screen has further to travel than a popup, so
+ * it comes from further away - the same 4% scale that reads as a grow on a
+ * 300px popover is invisible across 2560px.
+ */
+@keyframes rs-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(calc(1 - 0.12 * var(--rs-travel, 1)));
+    filter: blur(var(--rs-enter-blur, 0px));
+  }
+}
+
+/* Text or a control that is revealed by hovering its parent. */
+@keyframes rs-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(calc(4px * var(--rs-travel, 1)));
+  }
+}

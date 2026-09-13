@@ -1,0 +1,154 @@
+/*
+ * The full-screen power menu.
+ *
+ * The one place the surface's own vocabulary does not transfer whole: this
+ * covers the entire display over whatever was there, so it keeps a dark,
+ * near-opaque ground rather than a 40% wash. What it borrows is the shape -
+ * the panel's corner, the accent-tinted tile, the fill that deepens on press.
+ *
+ * Two things about the default layout are worth naming, because fixing them is
+ * most of what "cleaner" means here.
+ *
+ * The first is scale: six tiles in a 1200x500 grid with 25px gaps, which on
+ * any ordinary display is six buttons the size of playing cards for a decision
+ * that takes one glance. Capped to 520px below, which lands them at roughly
+ * the size of a module panel.
+ *
+ * The second is the label. The default hides it until hover and then pulls it
+ * up over the icon with `margin-bottom: -2.2rem` to fake the centring - so at
+ * rest the menu is six unlabelled glyphs, and finding "Hibernate" means
+ * sweeping the pointer across all of them. The label is simply shown here, and
+ * the hack is undone.
+ *
+ * What cannot be changed: the default marks `.power-menu-item:focus-visible`'s
+ * outline and `.svg-icon`'s 40% height `!important`, and cascade layers reverse
+ * for `!important`, so the earlier layer wins. The icon therefore stays 40% of
+ * whatever height the tile has - which is why the tile is sized rather than
+ * the glyph.
+ */
+
+.power-menu-overlay {
+  color: var(--rs-fg) !important;
+  /* Its own ground, not the wallpaper's: the surface's ink over glass would
+     be unreadable across six large tiles on an arbitrary screen. */
+  background-color: color-mix(in oklab, var(--color-gray-50, #16161e) 88%, transparent) !important;
+  background-image: var(--rs-grain) !important;
+  background-size: 120px 120px !important;
+  font-family: var(--rs-font) !important;
+  animation: rs-fade var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+.power-menu-overlay .power-menu {
+  gap: 18px !important;
+}
+
+/* ---------------------------------------------------------------- compact -- */
+
+.power-menu-overlay .power-menu-list {
+  max-width: 520px !important;
+  max-height: 260px !important;
+  gap: 10px !important;
+}
+
+.power-menu-overlay .power-menu-item {
+  gap: 8px !important;
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-chip) !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  transition: var(--rs-tr) !important;
+  /* Six large tiles appearing at once reads as a page load; dealt in, it
+     reads as a menu. The grid is fixed at six, so the delays are exact. */
+  animation: rs-tile-in var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.power-menu-overlay .power-menu-item:nth-child(2) {
+  animation-delay: var(--rs-step) !important;
+}
+.power-menu-overlay .power-menu-item:nth-child(3) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+.power-menu-overlay .power-menu-item:nth-child(4) {
+  animation-delay: calc(var(--rs-step) * 3) !important;
+}
+.power-menu-overlay .power-menu-item:nth-child(5) {
+  animation-delay: calc(var(--rs-step) * 4) !important;
+}
+.power-menu-overlay .power-menu-item:nth-child(n + 6) {
+  animation-delay: calc(var(--rs-step) * 5) !important;
+}
+
+/*
+ * The label, always. `margin-bottom` undone, `opacity` pinned on, and the
+ * hover transition kept only for the colour - there is nothing left to fade.
+ */
+.power-menu-overlay .power-menu-item-label {
+  margin-bottom: 0 !important;
+  opacity: 1 !important;
+  color: var(--rs-fg) !important;
+  font-size: var(--rs-text) !important;
+  font-weight: 500 !important;
+  transition: color var(--rs-dur-fast) var(--rs-ease) !important;
+}
+
+.power-menu-overlay .power-menu-item:hover {
+  background-color: var(--rs-selected) !important;
+  border-color: var(--rs-selected-edge) !important;
+  transform: translateY(-2px) !important;
+}
+
+.power-menu-overlay .power-menu-item:active {
+  background-color: var(--rs-selected-strong) !important;
+  transform: scale(0.97) !important;
+  transition-duration: var(--rs-dur-fast) !important;
+}
+
+.power-menu-overlay .power-menu-item .svg-icon {
+  transition: transform var(--rs-dur) var(--rs-ease-pop) !important;
+}
+
+.power-menu-overlay .power-menu-item:hover .svg-icon {
+  transform: scale(1.08) !important;
+}
+
+/* ------------------------------------------------------------ the header -- */
+
+/*
+ * A 100px portrait and a 2rem farewell over a menu that is now 520px wide is
+ * the header shouting over the thing it introduces. Both come down to the
+ * scale the rest of the shell sets type at.
+ */
+.power-menu-overlay .power-menu-user {
+  gap: 8px !important;
+}
+
+.power-menu-overlay .power-menu-user-profile {
+  width: 56px !important;
+  height: 56px !important;
+  transition: transform var(--rs-dur-slow) var(--rs-ease) !important;
+}
+
+.power-menu-overlay .power-menu-user-email {
+  color: var(--rs-fg-muted) !important;
+  font-size: var(--rs-text) !important;
+  font-weight: 400 !important;
+}
+
+.power-menu-overlay .power-menu-bye-bye {
+  margin-bottom: 0 !important;
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+}
+
+.power-menu-overlay .power-menu-user,
+.power-menu-overlay .power-menu-bye-bye {
+  animation: rs-tile-in var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+.power-menu-overlay .power-menu-uptime {
+  color: var(--rs-fg-muted) !important;
+  font-style: normal !important;
+  font-size: var(--rs-text-sm) !important;
+  animation: rs-fade var(--rs-dur-slow) var(--rs-ease) both !important;
+  animation-delay: calc(var(--rs-step) * 6) !important;
+}

@@ -1,0 +1,498 @@
+id: "@ralfm/surface"
+metadata:
+  displayName: !extend i18n/display_name.yml
+  description: !extend i18n/description.yml
+  tags:
+    - toolbar
+    - weg
+    - launcher
+    - desktop
+
+# Knobs rather than edits, because a theme that has to be edited to be adjusted
+# is a theme that stops matching the surface the first time the surface is
+# adjusted. Anything added after the first release is read in the CSS with its
+# initial value as a `var()` fallback: a session older than this file has not
+# registered it, and an unregistered knob is not its default - it is nothing.
+#
+# The host registers each of these with `@property` (hence the `syntax` key)
+# and writes the user's value into `:root`, so `shared/tokens.css` can derive
+# every ground, hover, radius and duration from them without any script.
+settings:
+  - group:
+      header: Palette
+      items:
+        # The option values carry their own quotes, and must. The host
+        # registers this with `syntax: "<string>"`, and a bare `midnight` is an
+        # ident rather than a string - it fails to parse, falls back to the
+        # initial value, and every preset silently does nothing. Measured in a
+        # browser against the SDK's own registration, not assumed.
+        - name: --rs-preset
+          label: Preset
+          description: 'Monochrome is the surface''s own neutral glass. The other four tint the glass and the selection colour, and nothing else - density, corner, blur and motion stay on their own settings, so any preset can still be tuned.'
+          tip: null
+          syntax: "<string>"
+          initialValue: '"monochrome"'
+          min: null
+          max: null
+          step: null
+          options:
+            - '"monochrome"'
+            - '"midnight"'
+            - '"ember"'
+            - '"moss"'
+            - '"orchid"'
+
+        # Empty means "whatever the preset says". `transparent` is the one
+        # value a style query can tell apart from a colour the user actually
+        # picked, which is what lets one knob be both an override and an
+        # opt-out without a second switch beside it.
+        - name: --rs-accent
+          label: Accent override
+          description: Leave this transparent to follow the preset. Set a colour to tint selected rows, checked toggles and filled sliders with it instead. Edges, markers and focus rings always stay in the foreground ink, so any colour here is safe.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+
+        # Written by `@ralfm/desktop`, not normally by hand. `transparent` is
+        # the sentinel a style query can tell apart from a colour that was
+        # actually chosen - the same trick the accent above uses - and it is
+        # what makes "no widget running" fall back cleanly to the ground.
+        - name: --rs-tint
+          label: Glass colour
+          description: The colour the shell's glass is made of. Left transparent, it is the preset's own ground. The Desktop widget sets it to the colour its panels are actually showing - the average of your wallpaper, under the panel opacity you chose - which is what makes a dock and a desktop panel the same material instead of merely similar ones.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+
+  - group:
+      header: Glass
+      items:
+        # These three sit *above* the surface's own opacities on purpose. A
+        # Seelen widget is its own transparent window, so `backdrop-filter`
+        # has no backdrop to sample and the frost the surface's panels get for
+        # free is not available here - see the material note in
+        # `shared/tokens.css`. Density, a sheen and a grain tile stand in for
+        # it, and density is the part that has to be a number.
+        - name: --rs-bar-opacity
+          label: Dock and toolbar fill
+          description: How solid the ground behind the dock and the toolbar is, in percent. Higher than a desktop panel wants, and deliberately - a dock cannot blur its backdrop, so density is the only thing hiding your wallpaper behind it. Below about 45 the wallpaper starts showing through in focus, which reads as cellophane rather than glass.
+          tip: null
+          syntax: "<number>"
+          initialValue: 62
+          min: 0
+          max: 100
+          step: 1
+          options: null
+
+        - name: --rs-panel-opacity
+          label: Popup and menu fill
+          description: Ground for flyouts, popups, tooltips and right-click menus, in percent. These open over windows rather than over the wallpaper, so they carry more than the bars do.
+          tip: null
+          syntax: "<number>"
+          initialValue: 78
+          min: 0
+          max: 100
+          step: 1
+          options: null
+
+        - name: --rs-overlay-opacity
+          label: Start menu and switcher fill
+          description: Ground for the full-surface layers - start menu, app switcher, workspace overview - in percent. Matches the command palette, which is the heaviest thing the surface draws.
+          tip: null
+          syntax: "<number>"
+          initialValue: 85
+          min: 0
+          max: 100
+          step: 1
+          options: null
+
+        - name: --rs-frost
+          label: Frosted texture
+          description: The sheen and grain that make a flat fill read as a surface with light falling on it. Texture can only sit on top of what shows through, never hide it - so if the wallpaper is reading through the dock, the fill above is the setting to raise, not this one. Zero turns it off.
+          tip: null
+          syntax: "<number>"
+          initialValue: 100
+          min: 0
+          max: 150
+          step: 5
+          options: null
+
+        - name: --rs-blur
+          label: Backdrop blur
+          description: Only reaches the few layers that have page content behind them - a folder opened in the start menu, a card over a popup's own ground. A widget's outermost panel is its own window, and a window has no backdrop to blur, whatever this says.
+          tip: null
+          syntax: "<length-percentage>"
+          initialValue: 14
+          initialValueUnit: px
+          min: null
+          max: null
+          step: null
+          options: null
+
+  - group:
+      header: Shape and colour
+      items:
+        - name: --rs-radius
+          label: Corner radius
+          description: The corner of a panel. Row and tile corners are derived from it, so one value keeps them in proportion.
+          tip: null
+          syntax: "<length-percentage>"
+          initialValue: 20
+          initialValueUnit: px
+          min: null
+          max: null
+          step: null
+          options: null
+
+        - name: --rs-edge
+          label: Edge line strength
+          description: How visible the hairline around a panel is, in percent.
+          tip: null
+          syntax: "<number>"
+          initialValue: 34
+          min: 0
+          max: 100
+          step: 1
+          options: null
+
+  # These three exist mostly to be written *to*. `@ralfm/desktop` mirrors its
+  # own typography and density settings into them when "Apply these to the
+  # Seelen shell" is on, so one set of choices dresses the desktop and the
+  # shell together. They are ordinary settings either way - a shell without
+  # that widget installed can still set them by hand.
+  - group:
+      header: Typography
+      items:
+        - name: --rs-font-family
+          label: Interface font
+          description: The family every panel, row and menu in the shell is set in.
+          tip: null
+          syntax: "<family-name>"
+          # Quoted, so it is a valid CSS <family-name> if a future engine ever
+          # does register this syntax. Today it registers to nothing and the
+          # fallback in `--rs-font` is what carries the default.
+          initialValue: '"Segoe UI Variable Text"'
+          min: null
+          max: null
+          step: null
+          options: null
+
+        - name: --rs-font-size
+          label: Base text size
+          description: Every other size in the shell is a proportion of this one, so moving it moves the whole shell rather than one label.
+          tip: null
+          syntax: "<length-percentage>"
+          initialValue: 14
+          initialValueUnit: px
+          min: null
+          max: null
+          step: null
+          options: null
+
+        - name: --rs-density
+          label: Density
+          description: Multiplies every padding and gap. Below 1 is compact, above 1 is roomy.
+          tip: null
+          syntax: "<number>"
+          initialValue: 1
+          min: 0.6
+          max: 1.6
+          step: 0.05
+          options: null
+
+  - group:
+      header: Motion
+      items:
+        # One multiplier over every duration and stagger in the theme, rather
+        # than a switch: 0 stops the shell dead, 1 is the tuned set, 2 is slow
+        # enough to watch what each transition is actually doing. Seelen's own
+        # performance mode and the system's reduced-motion setting both
+        # override it downwards without needing this touched.
+        - name: --rs-motion
+          label: Animation speed
+          description: Scales every transition, entrance and stagger in the shell. 1 is the tuned pace, 0 turns motion off entirely, 2 halves the speed.
+          tip: null
+          syntax: "<number>"
+          initialValue: 1
+          min: 0
+          max: 2
+          step: 0.05
+          options: null
+
+        # The *shape* of the motion, beside its speed. Quoted for the same
+        # reason the preset is - see the note there.
+        - name: --rs-motion-style
+          label: Animation style
+          description: 'Fluid glides into place. Spring lands with real damped-spring physics - a little overshoot and settle on every entrance and hover. Snappy is quicker and travels less. Gentle is slower and travels further, with no bounce.'
+          tip: null
+          syntax: "<string>"
+          initialValue: '"fluid"'
+          min: null
+          max: null
+          step: null
+          options:
+            - '"fluid"'
+            - '"spring"'
+            - '"snappy"'
+            - '"gentle"'
+
+        - name: --rs-stagger
+          label: List stagger
+          description: How far apart the rows of a list, the tiles of the start menu and the items of the dock arrive. 1 is the tuned step, 0 brings a whole list in at once, 3 deals it in slowly.
+          tip: null
+          syntax: "<number>"
+          initialValue: 1
+          min: 0
+          max: 3
+          step: 0.1
+          options: null
+
+        - name: --rs-entrance-blur
+          label: Entrance blur
+          description: Panels - the start menu, popups, the switcher, the dock - come into focus as they arrive, from this many pixels of blur. 0 turns it off. Lists and tiles never blur, so this stays cheap however full the start menu is.
+          tip: null
+          syntax: "<number>"
+          initialValue: 3
+          min: 0
+          max: 12
+          step: 1
+          options: null
+
+  - group:
+      header: Dock
+      items:
+        - name: --rs-dock-zoom
+          label: Magnification
+          description: How much the icon under the pointer grows, in percent. Its neighbours follow it two deep, at 45% and 15% of this. 0 turns magnification off.
+          tip: null
+          syntax: "<number>"
+          initialValue: 14
+          min: 0
+          max: 40
+          step: 1
+          options: null
+
+        - name: --rs-dock-lift
+          label: Hover lift
+          description: How far, in pixels, the icon under the pointer rises out of the dock. Its neighbours rise with it, part of the way.
+          tip: null
+          syntax: "<number>"
+          initialValue: 5
+          min: 0
+          max: 16
+          step: 1
+          options: null
+
+  # The start button is drawn by the theme: a mask for the shape, a background
+  # for the colour. That is what lets one glyph take any colour and finish -
+  # an icon pack's picture can only ever be that picture. "Icon pack" hands
+  # the button back to whatever pack supplies it.
+  - group:
+      header: Start button
+      items:
+        - name: --rs-start-icon
+          label: Icon
+          description: 'Surface is this theme''s own mark - three panes and a circle. Orbit, Petal, Spark and Windows are the alternatives. Icon pack shows whatever your icon packs provide for the start button, untouched by the settings below.'
+          tip: null
+          syntax: "<string>"
+          initialValue: '"surface"'
+          min: null
+          max: null
+          step: null
+          options:
+            - '"surface"'
+            - '"orbit"'
+            - '"petal"'
+            - '"spark"'
+            - '"windows"'
+            - '"pack"'
+
+        - name: --rs-start-color
+          label: Icon colour
+          description: Leave this transparent to draw the icon in the shell's ink, which follows light and dark mode. Set a colour to use that instead.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+
+        - name: --rs-start-finish
+          label: Icon finish
+          description: Flat is one colour. Glass lights the icon from the top-left like the panels' sheen. Duotone runs the icon colour into the preset's accent.
+          tip: null
+          syntax: "<string>"
+          initialValue: '"glass"'
+          min: null
+          max: null
+          step: null
+          options:
+            - '"flat"'
+            - '"glass"'
+            - '"duotone"'
+
+        - name: --rs-start-size
+          label: Icon size
+          description: The icon's size as a percentage of the dock tile. The glyphs carry a little margin of their own, so 70 sits level with a full-bleed app icon beside it.
+          tip: null
+          syntax: "<number>"
+          initialValue: 70
+          min: 30
+          max: 100
+          step: 1
+          options: null
+
+        - name: --rs-start-glow
+          label: Glow
+          description: A soft light behind the icon, in the icon's colour. It brightens on hover. 0 turns it off.
+          tip: null
+          syntax: "<number>"
+          initialValue: 40
+          min: 0
+          max: 100
+          step: 5
+          options: null
+
+        - name: --rs-start-hover
+          label: Hover animation
+          description: Spin turns the icon a quarter. Tilt leans it. Pulse beats while the pointer is on it. Bloom grows the icon and its glow together.
+          tip: null
+          syntax: "<string>"
+          initialValue: '"spin"'
+          min: null
+          max: null
+          step: null
+          options:
+            - '"spin"'
+            - '"tilt"'
+            - '"pulse"'
+            - '"bloom"'
+            - '"none"'
+
+  - group:
+      header: Start menu
+      items:
+        - name: --rs-menu-layout
+          label: Layout
+          description: Rail puts your profile and the settings and power buttons down the left. Classic puts them in a strip along the bottom, leaving the full width for applications.
+          tip: null
+          syntax: "<string>"
+          initialValue: '"rail"'
+          min: null
+          max: null
+          step: null
+          options:
+            - '"rail"'
+            - '"classic"'
+
+        - name: --rs-menu-position
+          label: Position
+          description: Where the menu sits when it is not full screen. Bottom and Top hang it from that edge, the offset below away from it.
+          tip: null
+          syntax: "<string>"
+          initialValue: '"center"'
+          min: null
+          max: null
+          step: null
+          options:
+            - '"center"'
+            - '"bottom"'
+            - '"top"'
+
+        - name: --rs-menu-offset
+          label: Edge offset
+          description: For the Bottom and Top positions, how many pixels to leave between the menu and the edge - enough to clear the dock or toolbar.
+          tip: null
+          syntax: "<number>"
+          initialValue: 96
+          min: 0
+          max: 400
+          step: 2
+          options: null
+
+        - name: --rs-menu-width
+          label: Width
+          description: The menu's width in pixels. It never grows past 94% of the display.
+          tip: null
+          syntax: "<number>"
+          initialValue: 860
+          min: 480
+          max: 1600
+          step: 10
+          options: null
+
+        - name: --rs-menu-height
+          label: Height
+          description: The menu's height in pixels. It never grows past 82% of the display.
+          tip: null
+          syntax: "<number>"
+          initialValue: 560
+          min: 320
+          max: 1200
+          step: 10
+          options: null
+
+        - name: --rs-tile-size
+          label: Tile size
+          description: The size of one application tile in pixels. The icon inside it is always half of this, so the grid keeps its proportions at any size.
+          tip: null
+          syntax: "<number>"
+          initialValue: 88
+          min: 64
+          max: 140
+          step: 2
+          options: null
+
+        - name: --rs-menu-entrance
+          label: Entrance
+          description: How the menu arrives. Rise comes up from below, Drop comes down from above, Pop grows in place with a small overshoot, Zoom grows from further away, and Fade only fades. Full screen always fades.
+          tip: null
+          syntax: "<string>"
+          initialValue: '"rise"'
+          min: null
+          max: null
+          step: null
+          options:
+            - '"rise"'
+            - '"drop"'
+            - '"pop"'
+            - '"zoom"'
+            - '"fade"'
+
+# Variables and keyframes only - see the note at the top of the file it points at.
+sharedStyles: !include shared/tokens.css
+
+styles:
+  # The shell proper.
+  "@seelen/fancy-toolbar": !include styles/fancy-toolbar.css
+  "@seelen/weg": !include styles/weg.css
+  "@seelen/weg-preview": !include styles/weg-preview.css
+  "@seelen/apps-menu": !include styles/apps-menu.css
+  "@seelen/task-switcher": !include styles/task-switcher.css
+  "@seelen/power-menu": !include styles/power-menu.css
+  "@seelen/window-manager": !include styles/window-manager.css
+  "@seelen/workspaces-viewer": !include styles/workspaces-viewer.css
+
+  # Everything that opens as a popup shares one file; see its header for why.
+  "@seelen/context-menu": !include styles/popups.css
+  "@seelen/tooltip": !include styles/popups.css
+  "@seelen/flyouts": !include styles/popups.css
+  "@seelen/notifications": !include styles/popups.css
+  "@seelen/quick-settings": !include styles/popups.css
+  "@seelen/media-popup": !include styles/popups.css
+  "@seelen/network-popup": !include styles/popups.css
+  "@seelen/bluetooth-popup": !include styles/popups.css
+  "@seelen/calendar-popup": !include styles/popups.css
+  "@seelen/system-tray": !include styles/popups.css
+  "@seelen/user-menu": !include styles/popups.css
+  "@seelen/keyboard-selector": !include styles/popups.css
+  "@seelen/dialog": !include styles/popups.css

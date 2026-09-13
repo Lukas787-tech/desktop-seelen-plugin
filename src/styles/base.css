@@ -1,0 +1,174 @@
+/*
+ * Base layer for every widget in this package.
+ *
+ * Colours come from Seelen's own contrast-adaptive token set (--color-*),
+ * which the host injects along with the user's active themes. Using those
+ * tokens rather than literal colours is what makes this surface restyle
+ * itself when the user switches themes.
+ */
+
+/*
+ * Every box is its border box.
+ *
+ * Not a preference: the panels are dense, and almost every row in them is
+ * `width: 100%` with its own padding. Under the default `content-box` each of
+ * those is its padding wider than the list holding it, which pushed a
+ * horizontal scrollbar onto the list - visible under the Quick settings
+ * sliders, and the same class of fault as a menu that has to be scrolled
+ * sideways. A panel's stored `w`/`h` now means its rendered size too, which is
+ * what the drag clamp already assumed.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/*
+ * The surface's own tokens.
+ *
+ * Everything here is a *default*: `src/lib/appearance.ts` overwrites the ones
+ * the user can configure on the surface's root element, and the values below
+ * are what the palette (which has no such settings) and the offline preview
+ * use on their own. Written as a fallback chain rather than duplicated, so
+ * there is one definition of what a panel looks like and three ways to reach
+ * it.
+ *
+ * `--rs-*` is the shell theme's token set. Seelen injects an active theme's
+ * shared styles into every widget, this one included, so reading them here is
+ * what lets a theme preset restyle the desktop along with the dock and the
+ * start menu instead of stopping at the window edge.
+ *
+ * Declared on `:root` *and* `body`, which is not belt-and-braces. A custom
+ * property's `var()`s are substituted where the property is declared, and
+ * `@ralfm/surface` puts its palette on `body` - it has to, because the preset
+ * switch is a style query and a style query cannot match the element carrying
+ * the value it tests. A `--panel-ground` declared only on `:root` would
+ * therefore look for `--rs-ground` one level above where the theme defines it
+ * and silently take the fallback every time. The `body` copy resolves against
+ * the theme's own values; the `:root` copy is what the palette widget and the
+ * offline preview use.
+ */
+:root,
+body {
+  --surface-pad: var(--spacing-m, 1rem);
+  --surface-radius: 14px;
+
+  /* The colour a panel is made of, before its opacity is applied. */
+  --panel-ground: var(--rs-ground, var(--color-gray-50, #1a1a1a));
+  --panel-alpha: 0.72;
+  --panel-edge: 38%;
+  --panel-blur: 18px;
+  --panel-shadow: var(--shadow-m, 2px 2px 8px rgb(0 0 0 / 0.16));
+
+  --panel-bg: color-mix(in oklab, var(--panel-ground) calc(var(--panel-alpha) * 100%), transparent);
+  --panel-border: color-mix(in oklab, var(--color-gray-300, #666) var(--panel-edge), transparent);
+  --panel-fg: var(--color-gray-900, #eee);
+  --panel-fg-muted: var(--color-gray-600, #999);
+
+  /*
+   * The frosted material, matching the shell theme's so a module panel and a
+   * dock are the same surface. Both defer to the theme's own copy when one is
+   * active, so there is never two subtly different grains on one screen.
+   */
+  --surface-sheen: var(
+    --rs-sheen,
+    linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.1) 0%,
+      rgb(255 255 255 / 0.032) 34%,
+      rgb(0 0 0 / 0.026) 74%,
+      rgb(0 0 0 / 0.075) 100%
+    )
+  );
+  --surface-grain: var(
+    --rs-grain,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E")
+  );
+  --panel-texture: none;
+
+  /* Typography and spacing, overwritten per surface by `appearance.ts`. */
+  --ui-font: var(--rs-font, var(--font-family, 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif));
+  --display-font: var(--ui-font);
+  --ui-size: 14px;
+  --density: 1;
+  --icon-radius: 10px;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  /* The host paints wallpaper behind us; never draw an opaque page ground. */
+  background: transparent;
+  color: var(--panel-fg);
+  font-family: var(--ui-font);
+  font-size: var(--ui-size);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The desktop surface must never scroll or show a caret/selection by default. */
+body {
+  user-select: none;
+  cursor: default;
+}
+
+/*
+ * ...but a field that is typed into is exactly where a caret and a selection
+ * belong. `user-select` inherits, so the rule above reaches inside every text
+ * box on the surface and makes its own contents unselectable - no drag-select,
+ * no double-click-a-word in the notes panel.
+ */
+input,
+textarea,
+[contenteditable] {
+  user-select: text;
+  cursor: auto;
+}
+
+/*
+ * Buttons carry their own look everywhere in this package, so the browser's
+ * default border and font must go. Owned here rather than left to the host:
+ * theme tokens are injected into third-party widgets, a CSS reset is not
+ * promised, and a stray 1px border around every menu row is what that costs.
+ * Text fields, selects and ranges are reset the same way; the checkbox is the
+ * one control left to the platform, because the todo list wants the native
+ * tick.
+ */
+button,
+input:not([type='checkbox']),
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  border: 0;
+}
+
+button {
+  background: transparent;
+}
+
+/*
+ * Thin, quiet scrollbars.
+ *
+ * WebView2's default is the full-width Windows bar, which is 17px of chrome
+ * inside a panel that is often only 260px wide - it crowds the content and
+ * reads as a control the surface does not otherwise have. `scrollbar-width`
+ * and `scrollbar-color` are honoured by this runtime, and both are inherited,
+ * so declaring them once here reaches every scrolling list.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-gray-400, #888) 45%, transparent) transparent;
+}
+
+.panel {
+  background-color: var(--panel-bg);
+  background-image: var(--panel-texture);
+  background-size: auto, 120px 120px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--surface-radius);
+  backdrop-filter: blur(var(--panel-blur));
+  box-shadow: var(--panel-shadow);
+}

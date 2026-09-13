@@ -1,0 +1,695 @@
+/*
+ * The start menu.
+ *
+ * Its nearest relative on the surface is the command palette: a field at the
+ * top, a scrolling list of things to launch under it, on a panel sized to its
+ * contents rather than to the display.
+ *
+ * That last part is the whole of this file's first half. The widget is a
+ * `preset: Overlay`, so its window covers the screen, and the default theme
+ * gives `.apps-menu` `width: 100%; height: 100%` inside it - in *both* modes.
+ * `data-fullscreen="false"` does not make a windowed menu; it adds ten pixels
+ * of padding and a corner to a panel that is still the size of the display.
+ *
+ * Two things follow from that, and they are why the menu looked nothing like
+ * the rest of the shell:
+ *
+ *  - the panel has no relationship to the amount of content in it, and
+ *  - the grids are `repeat(var(--columns), 1fr)`, so a tile is a fraction of
+ *    the *display*. At seven columns on a 2560px screen that is a 360px tile
+ *    with a 216px icon in it - the icon of one application drawn larger than
+ *    an entire module panel on the surface behind it.
+ *
+ * So the non-full-screen menu is given a real size and a real place, and every
+ * grid is switched from fractional tracks to fixed ones. Both are settings:
+ * the panel's width, height and position, and the tile's size, which the icon
+ * inside it follows at half.
+ *
+ * The markup, from Seelen 2.8.2:
+ *
+ *   .apps-menu[data-fullscreen]
+ *     > .apps-menu-header  > input[type=search], select (only while searching), button (All / Back)
+ *     > .apps-menu-body    > .pinned-view > ul.pinned-view-list > li.app | .folder
+ *                          | .all-apps-view > .all-apps-view-list > ...
+ *     > .apps-menu-footer  > .apps-menu-footer-left  > button.user-profile
+ *                          > .apps-menu-footer-right > button x3 (settings, power, full screen)
+ */
+
+body {
+  background: transparent !important;
+  font-family: var(--rs-font) !important;
+}
+
+/* ----------------------------------------------------------------- panel -- */
+
+.apps-menu {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-overlay-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  font-size: var(--rs-text) !important;
+  overflow: hidden !important;
+  animation: rs-surge var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+/*
+ * A panel, at last - placed without touching its parent.
+ *
+ * `position: absolute; inset: 0; margin: auto` with a definite width and
+ * height centres an element in its containing block on both axes, and the
+ * containing block here is the viewport, because nothing above it is
+ * positioned. That matters more than the tidiness: an earlier version made
+ * `#root` a centring grid instead, which is one guess about the widget's mount
+ * point away from doing nothing at all. This version does not care what the
+ * root element is called.
+ *
+ * Capped by the viewport in both axes, so a size chosen on a 4K display is
+ * still a panel, not a clipped one, on a 1080p laptop.
+ */
+.apps-menu[data-fullscreen='false'] {
+  position: absolute !important;
+  inset: 0 !important;
+  margin: auto !important;
+  width: min(calc(var(--rs-menu-width, 860) * 1px), 94vw) !important;
+  height: min(calc(var(--rs-menu-height, 560) * 1px), 82vh) !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  box-shadow: var(--rs-shadow-l), var(--rs-highlight) !important;
+  transform-origin: 50% 60% !important;
+}
+
+/*
+ * Anchored to an edge instead of centred. Setting the far inset to `auto`
+ * frees that axis, and the offset leaves room for the dock or the toolbar the
+ * menu was opened from; the horizontal `0 ... 0` with `margin: 0 auto` still
+ * centres it along the edge. The panel grows out of the edge it hangs from.
+ */
+@container style(--rs-menu-position: 'bottom') {
+  .apps-menu[data-fullscreen='false'] {
+    inset: auto 0 calc(var(--rs-menu-offset, 96) * 1px) 0 !important;
+    margin: 0 auto !important;
+    max-height: calc(100vh - var(--rs-menu-offset, 96) * 1px - 16px) !important;
+    transform-origin: 50% 100% !important;
+  }
+}
+
+@container style(--rs-menu-position: 'top') {
+  .apps-menu[data-fullscreen='false'] {
+    inset: calc(var(--rs-menu-offset, 96) * 1px) 0 auto 0 !important;
+    margin: 0 auto !important;
+    max-height: calc(100vh - var(--rs-menu-offset, 96) * 1px - 16px) !important;
+    transform-origin: 50% 0% !important;
+  }
+}
+
+/*
+ * The entrance. Rise is the default because a start menu is opened from a
+ * bar, and a bar is almost always below it; the rest are there for a bar that
+ * is not. Full screen keeps its fade whatever is chosen - a layer the size of
+ * the display that moves 28px reads as the screen lurching.
+ */
+@container style(--rs-menu-entrance: 'pop') {
+  .apps-menu {
+    animation-name: rs-pop !important;
+    animation-timing-function: var(--rs-ease-pop) !important;
+  }
+}
+
+@container style(--rs-menu-entrance: 'zoom') {
+  .apps-menu {
+    animation-name: rs-zoom-in !important;
+  }
+}
+
+@container style(--rs-menu-entrance: 'drop') {
+  .apps-menu {
+    animation-name: rs-descend !important;
+  }
+}
+
+@container style(--rs-menu-entrance: 'fade') {
+  .apps-menu {
+    animation-name: rs-fade !important;
+  }
+}
+
+.apps-menu[data-fullscreen='true'] {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  animation-name: rs-fade !important;
+}
+
+/* ------------------------------------------------------------- left rail -- */
+
+/*
+ * The menu is re-laid as two columns: a rail down the left for who you are and
+ * what you can do to the machine, and the applications to the right of it.
+ *
+ * The footer is what becomes the rail. That is not a compromise - it already
+ * holds exactly the right things (the user profile, and the settings, power
+ * and full-screen buttons) and the default theme merely spreads them along the
+ * bottom edge, which is the least reachable part of a panel and the furthest
+ * from where the eye starts.
+ *
+ * "Classic" puts the footer back along the bottom, for anyone who wants the
+ * width for applications instead; see the block after this section.
+ */
+.apps-menu {
+  grid-template-columns: 150px 1fr !important;
+  grid-template-rows: min-content 1fr !important;
+}
+
+.apps-menu-header {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+
+.apps-menu-body {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+}
+
+.apps-menu-footer {
+  grid-column: 1 !important;
+  grid-row: 1 / -1 !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 3px !important;
+  padding: 12px 10px !important;
+  border-right: 1px solid var(--rs-divider) !important;
+  background-color: color-mix(in oklab, var(--color-gray-50, #16161e) 22%, transparent) !important;
+}
+
+.apps-menu-footer-left,
+.apps-menu-footer-right {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 3px !important;
+  width: 100% !important;
+}
+
+/* The profile sits at the head of the rail, over a rule, like a panel title. */
+.apps-menu-footer .user-profile {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  padding: 6px 8px 10px !important;
+  margin-bottom: 6px !important;
+  border-bottom: 1px solid var(--rs-divider) !important;
+  font-size: var(--rs-text-sm) !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Rail entries are menu rows, and behave exactly like the ones in a flyout. */
+.apps-menu-footer button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+  padding: calc(7px * var(--rs-density)) calc(8px * var(--rs-density)) !important;
+  font-size: var(--rs-text-sm) !important;
+}
+
+/*
+ * Classic: one column, footer along the bottom as a strip - profile on the
+ * left, the three buttons on the right. Every rule above that turned the
+ * footer into a rail is turned back, and nothing else changes.
+ */
+@container style(--rs-menu-layout: 'classic') {
+  .apps-menu {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: min-content 1fr min-content !important;
+  }
+
+  .apps-menu-header,
+  .apps-menu-body {
+    grid-column: 1 !important;
+  }
+
+  .apps-menu-footer {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 6px 10px !important;
+    border-right: 0 !important;
+    border-top: 1px solid var(--rs-divider) !important;
+  }
+
+  .apps-menu-footer-left,
+  .apps-menu-footer-right {
+    flex-direction: row !important;
+    align-items: center !important;
+    width: auto !important;
+  }
+
+  .apps-menu-footer .user-profile {
+    width: auto !important;
+    padding: calc(5px * var(--rs-density)) calc(8px * var(--rs-density)) !important;
+    margin-bottom: 0 !important;
+    border-bottom: 0 !important;
+  }
+
+  .apps-menu-footer-right button {
+    width: auto !important;
+  }
+}
+
+/* ----------------------------------------------------------------- grids -- */
+
+/*
+ * Fixed tracks, not fractions. `auto-fill` lays down as many tile-sized
+ * columns as the panel holds and `justify-content: center` keeps the remainder
+ * split evenly either side, so the grid stays centred without the tiles
+ * stretching to swallow it. This is what stops the menu growing with the
+ * display.
+ *
+ * `--columns` is left alone deliberately: the default theme's own rule is
+ * overridden here rather than retuned, so nothing downstream depends on a
+ * number that no longer describes the layout.
+ */
+.pinned-view-list,
+.all-apps-view-list,
+.folder-modal-items {
+  grid-template-columns: repeat(auto-fill, calc(var(--rs-tile-size, 88) * 1px)) !important;
+  justify-content: center !important;
+  align-content: start !important;
+  gap: 6px !important;
+}
+
+/*
+ * The default frames each grid in 2rem of padding and separates the tiles by
+ * another 1rem, which is most of a tile's worth of air between every pair.
+ * Tightened to the surface's own spacing, where a list is dense and the panel
+ * around it is what breathes.
+ */
+.pinned-view,
+.all-apps-view {
+  padding: calc(12px * var(--rs-density)) calc(14px * var(--rs-density)) !important;
+}
+
+/* The footer is the rail now and carries its own padding, set above; listing
+   it here too would silently override that with the header's. */
+.apps-menu-header {
+  padding: calc(8px * var(--rs-density)) calc(10px * var(--rs-density)) !important;
+}
+
+.folder-modal-content {
+  padding: 18px !important;
+  gap: 10px !important;
+}
+
+/* ----------------------------------------------------------------- tiles -- */
+
+/*
+ * The default theme tints every tile with `--bg-light`, a 60% wash of the
+ * system accent. Redefining the variable rather than chasing each rule that
+ * uses it catches the pinned grid, the all-apps grid and the folder modal in
+ * one place - and the surface's icons hover grey, not blue.
+ */
+:root {
+  --bg-light: var(--rs-tile-hover);
+}
+
+.app,
+.folder {
+  gap: 5px !important;
+  padding: calc(8px * var(--rs-density)) calc(4px * var(--rs-density)) !important;
+  border-radius: var(--rs-row-radius) !important;
+  transition: var(--rs-tr) !important;
+}
+
+/*
+ * An absolute size, for the same reason the tracks are absolute: `width: 60%`
+ * of a tile that was a fraction of the display is how a 216px icon happened.
+ * Half the tile, which is the 44px-in-88px proportion the grid was drawn at.
+ */
+.app-icon,
+.folder-grid {
+  width: calc(var(--rs-tile-size, 88) * 0.5px) !important;
+  height: calc(var(--rs-tile-size, 88) * 0.5px) !important;
+  transition:
+    transform var(--rs-dur) var(--rs-ease-pop),
+    filter var(--rs-dur) var(--rs-ease),
+    background-color var(--rs-dur-fast) var(--rs-ease) !important;
+}
+
+.app-icon img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.app:hover,
+.folder:hover {
+  background-color: var(--rs-tile-hover) !important;
+  transform: translateY(-2px) !important;
+}
+
+.app:active,
+.folder:active {
+  background-color: var(--rs-pressed) !important;
+  transform: scale(0.95) !important;
+  transition-duration: var(--rs-dur-fast) !important;
+}
+
+/*
+ * The logo grows a little further than the tile it sits in, and gains a
+ * shadow as it does. Two transforms composing rather than one is what makes a
+ * tile feel like it has depth instead of just getting bigger.
+ */
+.app:hover .app-icon,
+.folder:hover .folder-grid {
+  transform: scale(1.08) !important;
+  filter: drop-shadow(0 5px 10px rgb(0 0 0 / 0.35)) !important;
+}
+
+/* A press sinks the logo back through the tile, rather than only the tile. */
+.app:active .app-icon,
+.folder:active .folder-grid {
+  transform: scale(0.94) !important;
+  filter: none !important;
+  transition-duration: var(--rs-dur-fast) !important;
+}
+
+/*
+ * Selection is the accent wash plus a hairline of the same accent, which is
+ * how a selected icon is drawn on the surface. It replaces the default's
+ * 2px offset outline, which reads as focus rather than as selection.
+ */
+.app:focus-visible,
+.app[aria-selected='true'],
+.folder:focus-visible,
+.folder[aria-selected='true'] {
+  background-color: var(--rs-selected) !important;
+  outline: 1px solid var(--rs-selected-edge) !important;
+  outline-offset: 0 !important;
+}
+
+/*
+ * One line, not two.
+ *
+ * The default reserves `2.4em` for a two-line clamp, so every tile carries a
+ * blank second line unless its application happens to have a long name - which
+ * is a ragged strip of empty space running through the whole grid, and one of
+ * the two reasons the menu read as cluttered. One line with an ellipsis is
+ * shorter, straighter, and loses nothing that hovering does not restore.
+ */
+.app-name,
+.folder-name {
+  height: auto !important;
+  color: var(--rs-fg) !important;
+  font-size: var(--rs-text-xs) !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  -webkit-line-clamp: 1 !important;
+  line-clamp: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-shadow: none !important;
+  opacity: 0.85 !important;
+  transition: opacity var(--rs-dur-fast) var(--rs-ease) !important;
+}
+
+/* Except in full screen, where the menu can show wallpaper through it. */
+.apps-menu[data-fullscreen='true'] .app-name,
+.apps-menu[data-fullscreen='true'] .folder-name {
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.45) !important;
+}
+
+.app:hover .app-name,
+.app:focus-visible .app-name,
+.app[aria-selected='true'] .app-name,
+.folder:hover .folder-name,
+.folder:focus-visible .folder-name,
+.folder[aria-selected='true'] .folder-name {
+  opacity: 1 !important;
+}
+
+/* An icon that is not already a square gets the surface's fallback tile. */
+.app-icon:not([data-shape='square']),
+.folder-preview-icon:not([data-shape='square']) {
+  background-color: var(--rs-chip) !important;
+}
+
+.folder-grid {
+  background-color: var(--rs-chip) !important;
+  box-shadow: none !important;
+}
+
+/*
+ * A drop target - an app dragged over another to make a folder - swells and
+ * breathes rather than taking the default's 3px dashed system-accent border,
+ * which was the one blue thing left in the menu.
+ */
+.app.is-drop-target,
+.folder.is-drop-target {
+  border: 1px solid var(--rs-selected-edge) !important;
+  background-color: var(--rs-selected) !important;
+  transform: scale(1.06) !important;
+  animation: rs-breathe calc(var(--rs-dur-slow) * 3) ease-in-out infinite !important;
+}
+
+/* ---------------------------------------------------------------- chrome -- */
+
+/*
+ * The search field, set like the palette's: no border, a slightly lighter
+ * ground than the panel, and a corner two pixels softer than a row's so it
+ * reads as a field rather than as the first item in the list.
+ */
+.apps-menu-header input[type='search'],
+.apps-menu-header input[type='text'],
+.apps-menu-header select {
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-field) !important;
+  border: 0 !important;
+  border-radius: calc(var(--rs-row-radius) + 2px) !important;
+  padding: 6px 10px !important;
+  font-size: var(--rs-text) !important;
+  transition: var(--rs-tr) !important;
+}
+
+/*
+ * A focused field brightens; it does not acquire a coloured ring. The ring
+ * that used to be here was `--rs-accent` at 60%, which with the old blue
+ * default was the one unmistakably foreign thing in the whole shell.
+ */
+.apps-menu-header input[type='search']:focus,
+.apps-menu-header input[type='text']:focus {
+  background-color: var(--rs-chip-hover) !important;
+  box-shadow: inset 0 0 0 1px var(--rs-divider) !important;
+}
+
+/*
+ * The search-scope picker. It only exists while there is a query, so it
+ * arrives beside the field rather than shoving the field aside in one frame.
+ */
+.apps-menu-header select {
+  width: auto !important;
+  min-width: 104px !important;
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-chip) !important;
+  font-weight: 500 !important;
+  animation: rs-reveal var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.apps-menu-header select:hover {
+  background-color: var(--rs-chip-hover) !important;
+}
+
+.apps-menu-header input::placeholder {
+  color: var(--rs-fg-muted) !important;
+}
+
+.apps-menu-header {
+  animation: rs-drop var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+.apps-menu-footer {
+  animation: rs-rise var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+.apps-menu-footer .user-profile {
+  font-size: var(--rs-text-sm) !important;
+  font-weight: 500 !important;
+}
+
+.apps-menu-footer .user-profile-picture {
+  transition: transform var(--rs-dur) var(--rs-ease-pop) !important;
+}
+
+.apps-menu-footer .user-profile:hover .user-profile-picture {
+  transform: scale(1.1) !important;
+}
+
+/* The footer's power and user buttons, drawn as the surface's quiet buttons. */
+.apps-menu-footer button {
+  color: var(--rs-fg) !important;
+  border-radius: var(--rs-row-radius) !important;
+  transition: var(--rs-tr) !important;
+}
+
+.apps-menu-footer button:hover:enabled {
+  background-color: var(--rs-hover) !important;
+  transform: translateY(-1px) !important;
+}
+
+.apps-menu-footer button:active:enabled {
+  transform: scale(0.94) !important;
+}
+
+/* The button's glyph answers the pointer as the dock's icons do. */
+.apps-menu-footer-right button .slu-icon {
+  transition: transform var(--rs-dur) var(--rs-ease-pop) !important;
+}
+
+.apps-menu-footer-right button:hover .slu-icon {
+  transform: scale(1.15) !important;
+}
+
+/* Settings turns; it is a gear. */
+.apps-menu-footer-right button:first-child:hover .slu-icon {
+  transform: rotate(60deg) scale(1.1) !important;
+}
+
+/* Switching between the pinned grid and all applications is a view change. */
+.pinned-view,
+.all-apps-view {
+  animation: rs-pop var(--rs-dur) var(--rs-ease) both !important;
+}
+
+/* The surface states an empty list plainly; it does not apologise in italics. */
+.pinned-view-empty,
+.all-apps-view-empty {
+  color: var(--rs-fg-muted) !important;
+  font-style: normal !important;
+  font-size: var(--rs-text) !important;
+  font-weight: 400 !important;
+  animation: rs-fade var(--rs-dur-slow) var(--rs-ease) both !important;
+}
+
+/* ------------------------------------------------------------ tile stagger -- */
+
+/*
+ * The grid fills in rather than appearing at once. The delays have to be
+ * written out because CSS has no way to multiply a step by an element's index;
+ * thirteen is the point where the last tile is still arriving while the eye is
+ * still travelling, and everything past it shares that delay rather than
+ * dragging the tail out across a full panel of applications. The step itself
+ * is the Stagger setting, so zero deals the whole grid in at once.
+ */
+.pinned-view-list > *,
+.all-apps-view-list > *,
+.folder-modal-items > * {
+  animation: rs-tile-in var(--rs-dur) var(--rs-ease) both !important;
+}
+
+.pinned-view-list > *:nth-child(2),
+.all-apps-view-list > *:nth-child(2),
+.folder-modal-items > *:nth-child(2) {
+  animation-delay: var(--rs-step) !important;
+}
+.pinned-view-list > *:nth-child(3),
+.all-apps-view-list > *:nth-child(3),
+.folder-modal-items > *:nth-child(3) {
+  animation-delay: calc(var(--rs-step) * 2) !important;
+}
+.pinned-view-list > *:nth-child(4),
+.all-apps-view-list > *:nth-child(4),
+.folder-modal-items > *:nth-child(4) {
+  animation-delay: calc(var(--rs-step) * 3) !important;
+}
+.pinned-view-list > *:nth-child(5),
+.all-apps-view-list > *:nth-child(5),
+.folder-modal-items > *:nth-child(5) {
+  animation-delay: calc(var(--rs-step) * 4) !important;
+}
+.pinned-view-list > *:nth-child(6),
+.all-apps-view-list > *:nth-child(6),
+.folder-modal-items > *:nth-child(6) {
+  animation-delay: calc(var(--rs-step) * 5) !important;
+}
+.pinned-view-list > *:nth-child(7),
+.all-apps-view-list > *:nth-child(7),
+.folder-modal-items > *:nth-child(7) {
+  animation-delay: calc(var(--rs-step) * 6) !important;
+}
+.pinned-view-list > *:nth-child(8),
+.all-apps-view-list > *:nth-child(8),
+.folder-modal-items > *:nth-child(8) {
+  animation-delay: calc(var(--rs-step) * 7) !important;
+}
+.pinned-view-list > *:nth-child(9),
+.all-apps-view-list > *:nth-child(9),
+.folder-modal-items > *:nth-child(9) {
+  animation-delay: calc(var(--rs-step) * 8) !important;
+}
+.pinned-view-list > *:nth-child(10),
+.all-apps-view-list > *:nth-child(10),
+.folder-modal-items > *:nth-child(10) {
+  animation-delay: calc(var(--rs-step) * 9) !important;
+}
+.pinned-view-list > *:nth-child(11),
+.all-apps-view-list > *:nth-child(11),
+.folder-modal-items > *:nth-child(11) {
+  animation-delay: calc(var(--rs-step) * 10) !important;
+}
+.pinned-view-list > *:nth-child(12),
+.all-apps-view-list > *:nth-child(12),
+.folder-modal-items > *:nth-child(12) {
+  animation-delay: calc(var(--rs-step) * 11) !important;
+}
+.pinned-view-list > *:nth-child(n + 13),
+.all-apps-view-list > *:nth-child(n + 13),
+.folder-modal-items > *:nth-child(n + 13) {
+  animation-delay: calc(var(--rs-step) * 12) !important;
+}
+
+/* The rail's buttons follow the panel in, a step behind one another. */
+.apps-menu-footer-right > * {
+  animation: rs-tile-in var(--rs-dur) var(--rs-ease) both !important;
+  animation-delay: calc(var(--rs-step) * 3) !important;
+}
+.apps-menu-footer-right > *:nth-child(2) {
+  animation-delay: calc(var(--rs-step) * 4) !important;
+}
+.apps-menu-footer-right > *:nth-child(n + 3) {
+  animation-delay: calc(var(--rs-step) * 5) !important;
+}
+
+/* ------------------------------------------------------------------ folder -- */
+
+/*
+ * A folder opens over the menu's own ground, which makes this one of the few
+ * places in the whole theme where `backdrop-filter` has something to sample.
+ * 70vw x 70vh for a handful of icons was the same fault as the menu itself.
+ */
+.folder-modal {
+  width: min(560px, 86vw) !important;
+  height: min(420px, 74vh) !important;
+  color: var(--rs-fg) !important;
+  background-color: var(--rs-overlay-bg) !important;
+  background-image: var(--rs-sheen), var(--rs-grain) !important;
+  background-size: auto, 120px 120px !important;
+  border: 1px solid var(--rs-line) !important;
+  border-radius: var(--rs-radius) !important;
+  backdrop-filter: var(--rs-backdrop) !important;
+  -webkit-backdrop-filter: var(--rs-backdrop) !important;
+  box-shadow: var(--rs-shadow-l), var(--rs-highlight) !important;
+  animation: rs-pop var(--rs-dur) var(--rs-ease-pop) both !important;
+}
+
+.folder-modal-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}

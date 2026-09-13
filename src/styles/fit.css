@@ -1,0 +1,11 @@
+/*
+ * Content-sized layout, for popup widgets.
+ *
+ * The host's autosizer measures #root, so it must shrink-wrap its contents.
+ * A plain block element would stretch to the window's current width and the
+ * window would never get narrower than it started.
+ */
+#root {
+  width: max-content;
+  height: max-content;
+}
