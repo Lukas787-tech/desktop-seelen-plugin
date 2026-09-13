@@ -61,7 +61,7 @@ namespace SeelenDesktopSurface
     sealed class Installer
     {
         public const string Product = "Seelen Desktop Surface";
-        public const string Homepage = "https://github.com/Lukas787-tech/seelen-desktop-surface";
+        public const string Homepage = "https://github.com/Lukas787-tech/desktop-seelen-plugin";
         const string ProductKey = "SeelenDesktopSurface";
         const string Publisher = "Lukas787-tech";
         const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + ProductKey;

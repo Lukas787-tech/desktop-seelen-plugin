@@ -13,7 +13,7 @@ per-monitor settings, and a large, already-tested API surface.
 ## Install
 
 Download `SeelenDesktopSurface-Setup-<version>.exe` from
-[Releases](https://github.com/Lukas787-tech/seelen-desktop-surface/releases) and run it. It:
+[Releases](https://github.com/Lukas787-tech/desktop-seelen-plugin/releases) and run it. It:
 
 1. **Checks for Seelen UI 2.8 or newer** - in the registry, in `Program Files`, or as the Microsoft
    Store build - and offers to install or update it with winget (`Seelen.SeelenUI`) when it is

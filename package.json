@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Lukas787-tech/seelen-desktop-surface.git"
+    "url": "https://github.com/Lukas787-tech/desktop-seelen-plugin.git"
   },
   "scripts": {
     "build": "node scripts/build.mjs",
