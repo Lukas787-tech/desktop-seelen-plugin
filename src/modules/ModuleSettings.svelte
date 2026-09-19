@@ -1,7 +1,10 @@
 <script lang="ts">
   import Modal from './Modal.svelte';
-  import { config, type ConfigKey } from '$lib/config.svelte';
+  import SettingField from './SettingField.svelte';
+  import AppearanceSettings from './AppearanceSettings.svelte';
+  import { config } from '$lib/config.svelte';
   import { MODULES, PANEL_FIELDS, moduleKeys, type ModuleField } from '$lib/modules';
+  import { overlay } from '$lib/overlay.svelte';
   import { MIN_PANEL_SIZE, store, type PanelKind } from '$lib/store.svelte';
 
   interface Props {
@@ -14,9 +17,16 @@
   const module = $derived(MODULES[kind]);
   const keys = $derived(moduleKeys(module));
 
-  const cfg = $derived(config.current);
   const panel = $derived(store.state.panels.find((p) => p.kind === kind));
   const overridden = $derived(keys.filter((key) => config.overrides.has(key)));
+
+  /** The module's own on/off, drawn as one more field so it reads like the rest. */
+  const showField = $derived<ModuleField>({
+    key: module.enabledKey,
+    label: 'Show this module',
+    description: 'Turning it off leaves its position and contents untouched.',
+    type: 'switch',
+  });
 
   /**
    * Where edits made here land.
@@ -32,63 +42,33 @@
 
   let scope = $state<'monitor' | 'all'>(initialScope());
 
-  // `set` is generic over the key, which a key chosen at runtime cannot satisfy;
-  // the schema is what guarantees the value matches its field.
-  function setValue(key: ConfigKey, value: unknown): void {
-    config.set(key as never, value as never, scope);
-  }
-
-  function numberOf(key: ConfigKey): number {
-    const value = cfg[key];
-    return typeof value === 'number' ? value : 0;
-  }
-
-  function stringOf(key: ConfigKey): string {
-    const value = cfg[key];
-    return typeof value === 'string' ? value : '';
-  }
-
   function resize(part: 'w' | 'h', value: number): void {
     if (!panel) return;
     const next = { w: panel.w, h: panel.h, [part]: value };
     store.resizePanel(panel.id, next.w, next.h);
+  }
+
+  /** Everything else about how panels look lives in its own dialog; this is the way there. */
+  function openAppearance(): void {
+    onclose();
+    overlay.openDialog(AppearanceSettings, { tab: 'panels' as const, onclose: () => overlay.closeDialog() });
   }
 </script>
 
 <Modal title="{module.title} settings" {onclose} width={460}>
   <div class="scope" role="group" aria-label="Where changes apply">
     <span class="scope-label">Changes apply to</span>
-    <div class="segmented">
-      <button class:active={scope === 'all'} onclick={() => (scope = 'all')}>All displays</button>
-      <button class:active={scope === 'monitor'} onclick={() => (scope = 'monitor')}>
-        This display
-      </button>
+    <div class="m-tabs">
+      <button class:m-on={scope === 'all'} onclick={() => (scope = 'all')}>All displays</button>
+      <button class:m-on={scope === 'monitor'} onclick={() => (scope = 'monitor')}>This display</button>
     </div>
   </div>
 
   <section>
     <h3>{module.title}</h3>
-
-    <div class="row">
-      <div class="text">
-        <span class="label">Show this module</span>
-        <span class="description">
-          Turning it off leaves its position and contents untouched.
-        </span>
-      </div>
-      {@render override(module.enabledKey)}
-      <input
-        type="checkbox"
-        class="switch"
-        role="switch"
-        aria-label="Show this module"
-        checked={cfg[module.enabledKey] === true}
-        onchange={(e) => setValue(module.enabledKey, e.currentTarget.checked)}
-      />
-    </div>
-
-    {#each module.fields as fieldDef (fieldDef.key)}
-      {@render field(fieldDef)}
+    <SettingField def={showField} {scope} />
+    {#each module.fields as def (def.key)}
+      <SettingField {def} {scope} />
     {/each}
   </section>
 
@@ -131,9 +111,12 @@
 
   <section>
     <h3>All panels</h3>
-    {#each PANEL_FIELDS as fieldDef (fieldDef.key)}
-      {@render field(fieldDef)}
+    {#each PANEL_FIELDS as def (def.key)}
+      <SettingField {def} {scope} />
     {/each}
+    <div class="buttons">
+      <button onclick={openAppearance}>Looks, colours, edges and more...</button>
+    </div>
   </section>
 
   {#if overridden.length}
@@ -149,74 +132,6 @@
   {/if}
 </Modal>
 
-{#snippet override(key: ConfigKey)}
-  {#if config.overrides.has(key)}
-    <button
-      class="badge"
-      title="Set only on this display. Click to follow the other displays again."
-      onclick={() => config.clearOverride(key)}
-    >
-      this display
-    </button>
-  {/if}
-{/snippet}
-
-{#snippet field(def: ModuleField)}
-  <div class="row">
-    <div class="text">
-      <span class="label">{def.label}</span>
-      {#if def.description}<span class="description">{def.description}</span>{/if}
-    </div>
-
-    {@render override(def.key)}
-
-    {#if def.type === 'switch'}
-      <input
-        type="checkbox"
-        class="switch"
-        role="switch"
-        aria-label={def.label}
-        checked={cfg[def.key] === true}
-        onchange={(e) => setValue(def.key, e.currentTarget.checked)}
-      />
-    {:else if def.type === 'range'}
-      <div class="range">
-        <input
-          type="range"
-          aria-label={def.label}
-          min={def.min}
-          max={def.max}
-          step={def.step}
-          value={numberOf(def.key)}
-          oninput={(e) => setValue(def.key, e.currentTarget.valueAsNumber)}
-        />
-        <span class="value">{numberOf(def.key)}{def.unit ?? ''}</span>
-      </div>
-    {:else if def.type === 'select'}
-      <select
-        aria-label={def.label}
-        value={stringOf(def.key)}
-        onchange={(e) => setValue(def.key, e.currentTarget.value)}
-      >
-        {#each def.options ?? [] as option (option.value)}
-          <option value={option.value}>{option.label}</option>
-        {/each}
-      </select>
-    {:else}
-      <!-- Committed on change rather than on input: a write per keystroke
-           would rewrite the settings file while the user is still typing. -->
-      <input
-        type="text"
-        class="text-field"
-        aria-label={def.label}
-        placeholder={def.placeholder ?? ''}
-        value={stringOf(def.key)}
-        onchange={(e) => setValue(def.key, e.currentTarget.value)}
-      />
-    {/if}
-  </div>
-{/snippet}
-
 <style>
   .scope {
     display: flex;
@@ -227,30 +142,8 @@
   }
 
   .scope-label {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
-  }
-
-  .segmented {
-    display: flex;
-    gap: 2px;
-    padding: 2px;
-    border-radius: 9px;
-    background: color-mix(in oklab, var(--color-gray-300, #666) 18%, transparent);
-  }
-
-  .segmented button {
-    padding: 4px 10px;
-    font-size: 11px;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--panel-fg-muted);
-    cursor: pointer;
-  }
-
-  .segmented button.active {
-    background: color-mix(in oklab, var(--color-gray-300, #666) 45%, transparent);
-    color: var(--panel-fg);
   }
 
   section {
@@ -262,7 +155,7 @@
     align-items: baseline;
     gap: 8px;
     margin-bottom: 4px;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.09em;
@@ -286,82 +179,14 @@
   }
 
   .label {
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
   }
 
-  .description,
   .note {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     text-transform: none;
     letter-spacing: 0;
-  }
-
-  .badge {
-    flex: none;
-    padding: 2px 7px;
-    border-radius: 999px;
-    font-size: 10px;
-    cursor: pointer;
-    color: var(--panel-fg-muted);
-    background: color-mix(in oklab, var(--color-gray-300, #666) 26%, transparent);
-  }
-
-  .badge:hover {
-    color: var(--panel-fg);
-  }
-
-  /* A checkbox drawn as a switch, so the dialog reads like Seelen's own. */
-  .switch {
-    flex: none;
-    appearance: none;
-    width: 34px;
-    height: 19px;
-    border-radius: 999px;
-    position: relative;
-    cursor: pointer;
-    background: color-mix(in oklab, var(--color-gray-300, #666) 35%, transparent);
-    transition: background 0.15s ease;
-  }
-
-  .switch::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: #fff;
-    transition: transform 0.15s ease;
-  }
-
-  .switch:checked {
-    background: color-mix(in oklab, var(--color-blue-600, #37f) 85%, transparent);
-  }
-
-  .switch:checked::after {
-    transform: translateX(15px);
-  }
-
-  .range {
-    flex: none;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .range input {
-    width: 130px;
-    accent-color: var(--accent);
-  }
-
-  .value {
-    width: 42px;
-    font-size: 11px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    color: var(--panel-fg-muted);
   }
 
   .size {
@@ -371,29 +196,18 @@
   }
 
   .times {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
-  input[type='number'],
-  input[type='text'],
-  select {
+  input[type='number'] {
     width: 84px;
     padding: 5px 8px;
     font: inherit;
-    font-size: 12px;
-    border-radius: 8px;
+    font-size: calc(12px * var(--text-scale, 1));
+    border-radius: calc(8px * var(--round, 1));
     color: var(--panel-fg);
     background: color-mix(in oklab, var(--color-gray-100, #333) 50%, transparent);
-  }
-
-  select {
-    width: 110px;
-    cursor: pointer;
-  }
-
-  .text-field {
-    width: 180px;
   }
 
   .buttons {
@@ -405,8 +219,8 @@
   .buttons button,
   .link {
     padding: 5px 10px;
-    font-size: 11px;
-    border-radius: 7px;
+    font-size: calc(11px * var(--text-scale, 1));
+    border-radius: calc(7px * var(--round, 1));
     cursor: pointer;
     color: var(--panel-fg);
     background: color-mix(in oklab, var(--color-gray-300, #666) 22%, transparent);

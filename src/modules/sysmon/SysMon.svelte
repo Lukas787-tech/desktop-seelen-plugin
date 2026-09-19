@@ -4,6 +4,8 @@
 
   const cfg = $derived(config.current);
 
+  $effect(() => system.acquire());
+
   /** Builds an SVG polyline for a 0-100 series, newest sample on the right. */
   function sparkline(values: number[], width = 100, height = 28): string {
     if (values.length < 2) return '';
@@ -31,7 +33,7 @@
         <span class="value">{system.cpuUsage.toFixed(0)}%</span>
       </div>
       <svg viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
-        <polyline points={sparkline(system.cpuHistory)} style:stroke={cfg.accentColor} />
+        <polyline points={sparkline(system.cpuHistory)} />
       </svg>
       <span class="sub">{system.cores.length} cores</span>
     </div>
@@ -44,7 +46,7 @@
         <span class="value">{(system.memoryUsedRatio * 100).toFixed(0)}%</span>
       </div>
       <svg viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
-        <polyline points={sparkline(system.ramHistory)} style:stroke={cfg.accentColor} />
+        <polyline points={sparkline(system.ramHistory)} />
       </svg>
       {#if memory}
         <span class="sub">{formatBytes(usedBytes)} / {formatBytes(memory.total)}</span>
@@ -72,7 +74,7 @@
           <span class="value">{pct.toFixed(0)}%</span>
         </div>
         <div class="track">
-          <div class="fill" style:width="{pct}%" style:background={cfg.accentColor}></div>
+          <div class="fill" style:width="{pct}%"></div>
         </div>
         <span class="sub">{formatBytes(disk.availableSpace)} free</span>
       </div>
@@ -108,17 +110,17 @@
   }
 
   .label {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
   .value {
-    font-size: 13px;
+    font-size: calc(13px * var(--text-scale, 1));
     font-variant-numeric: tabular-nums;
   }
 
   .sub {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     font-variant-numeric: tabular-nums;
   }
@@ -133,7 +135,9 @@
     height: 28px;
   }
 
+  /* The document accent, so the lines follow the theme like everything else. */
   polyline {
+    stroke: var(--accent, #7aa2f7);
     fill: none;
     stroke-width: 1.5;
     stroke-linejoin: round;
@@ -143,12 +147,13 @@
 
   .track {
     height: 4px;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     overflow: hidden;
     background: color-mix(in oklab, var(--color-gray-300, #666) 30%, transparent);
   }
 
   .fill {
     height: 100%;
+    background: var(--accent, #7aa2f7);
   }
 </style>

@@ -1,0 +1,261 @@
+/*
+ * Motion for every widget in this package: the durations, curves and keyframes
+ * the surface, the palette and every module animate with.
+ *
+ * The shell theme already has a motion system - four durations, a set of
+ * curves, a stagger step and an `--rs-motion-style` that swaps them (see
+ * `themes/surface/shared/tokens.css`). Seelen injects that file into this
+ * document as well, so every token below is a fallback chain onto the theme's:
+ * with `@ralfm/surface` active a panel and the dock beside it glide on the same
+ * curve, and the theme's Animation speed and Animation style settings reshape
+ * both at once. Without the theme the surface keeps its own tuned set.
+ *
+ * Declared on `:root` *and* `body` for the reason `base.css` gives: the theme
+ * declares its curves on `body`, and a `var()` is substituted where the custom
+ * property holding it is declared.
+ *
+ * ## One rule about which property moves
+ *
+ * Entrances animate `transform`. Interactive states - a press, a lift, a hover
+ * nudge - use the individual `scale` and `translate` properties. The two
+ * compose instead of replacing each other, so a button pressed while it is
+ * still arriving shrinks where it is rather than jumping to its resting place.
+ */
+
+:root,
+body {
+  /* 1, or 0 while the surface's Animations setting is off. Set by `appearance.ts`. */
+  --motion: 1;
+
+  /* An exponential ease-out: almost all of the distance early, then a glide. */
+  --ease: var(--rs-ease, cubic-bezier(0.16, 1, 0.3, 1));
+  /* Overshoots, for things that appear from nothing. */
+  --ease-pop: var(--rs-ease-pop, cubic-bezier(0.34, 1.45, 0.5, 1));
+  /* The curve a transform transitions on, kept apart from colour. */
+  --ease-move: var(--rs-ease-move, cubic-bezier(0.16, 1, 0.3, 1));
+  /* Continuous movement: a marker sliding along, a bar tracking a value. */
+  --ease-smooth: var(--rs-ease-smooth, cubic-bezier(0.45, 0, 0.15, 1));
+  /*
+   * A real damped spring (zeta 0.6, omega 12) - the same samples as the theme's
+   * Spring style - for presses and releases, which should land with a little
+   * weight whatever style the rest of the motion is in. Regenerate rather than
+   * hand-edit: a point nudged by eye is a spring that no longer settles.
+   */
+  --ease-spring: linear(0, 0.027, 0.098, 0.198, 0.314, 0.436, 0.556, 0.669, 0.77, 0.857, 0.93, 0.987, 1.031, 1.062, 1.081, 1.092, 1.095, 1.092, 1.085, 1.076, 1.065, 1.053, 1.042, 1.031, 1.022, 1.013, 1.007, 1.001, 0.997, 0.994, 0.992, 0.991, 0.991, 0.991, 0.992, 0.993, 0.994, 0.995, 0.996, 0.997, 1);
+
+  /* How far an entrance comes from, as a multiple of each keyframe's distance. */
+  --travel: var(--rs-travel, 1);
+
+  --dur-fast: var(--rs-dur-fast, calc(140ms * var(--motion)));
+  --dur: var(--rs-dur, calc(240ms * var(--motion)));
+  --dur-slow: var(--rs-dur-slow, calc(380ms * var(--motion)));
+  /* A whole panel arriving: it is large, so it gets longer than a popover. */
+  --dur-enter: calc(var(--dur-slow) * 1.7);
+  /*
+   * One stagger increment; a list multiplies it by the row's position.
+   * `--stagger` is the surface's own List stagger setting; the theme's copy
+   * already carries the value the surface syncs into `--rs-stagger`.
+   */
+  --step: var(--rs-step, calc(30ms * var(--motion) * var(--stagger, 1)));
+
+  /* The keyframe a panel arrives on, chosen by the Entrance setting. */
+  --entrance: fx-panel-in;
+}
+
+/*
+ * The angle of a gradient panel edge (see `base.css`). Registered so it can be
+ * animated at all - an unregistered custom property is a string, and a string
+ * does not interpolate - and non-inherited so every ring turns on its own
+ * element rather than being resolved once on `body`.
+ */
+@property --ring-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 135deg;
+}
+
+/*
+ * Reduced motion zeroes the durations, as the shell theme does, so the two
+ * never disagree about whether things move. After the block above so it
+ * outranks it; Svelte's own transitions ask `src/lib/motion.ts`, which reads
+ * the same media query.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  body {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+    --dur-enter: 0ms;
+    --step: 0ms;
+  }
+}
+
+/* --------------------------------------------------------------- keyframes -- */
+
+/*
+ * Every entrance keyframe has only a `from`: the element animates from there
+ * to whatever it already is, so one keyframe serves any resting state.
+ * Distances are multiples of `--travel`.
+ */
+
+@keyframes fx-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* A module panel arriving on the surface: up, and a little way into place. */
+@keyframes fx-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(26px * var(--travel))) scale(calc(1 - 0.05 * var(--travel)));
+  }
+}
+
+/*
+ * The other panel entrances, chosen by the Entrance setting through
+ * `--entrance`. Same rules as the rest: only a `from`, distances in `--travel`.
+ */
+@keyframes fx-zoom {
+  from {
+    opacity: 0;
+    transform: scale(calc(1 - 0.14 * var(--travel)));
+  }
+}
+
+@keyframes fx-drop {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-30px * var(--travel)));
+  }
+}
+
+@keyframes fx-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-36px * var(--travel)));
+  }
+}
+
+/*
+ * Into focus. A filter on something panel-sized is not free, so this plays
+ * once per panel at start-up and never on anything numerous.
+ */
+@keyframes fx-focus-in {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: scale(calc(1 - 0.03 * var(--travel)));
+  }
+}
+
+/* A gradient panel edge turning once round; see `@property --ring-angle`. */
+@keyframes fx-ring {
+  from {
+    --ring-angle: 135deg;
+  }
+  to {
+    --ring-angle: 495deg;
+  }
+}
+
+/* A row or a fact arriving in a list. */
+@keyframes fx-rise {
+  from {
+    opacity: 0;
+    transform: translateY(calc(7px * var(--travel)));
+  }
+}
+
+/* Something that belongs to a point, growing out of it. */
+@keyframes fx-pop {
+  from {
+    opacity: 0;
+    transform: scale(calc(1 - 0.07 * var(--travel)));
+  }
+}
+
+/* A count, a dot or a badge that was not there a moment ago. */
+@keyframes fx-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/* One tile in a grid that arrives as a group. */
+@keyframes fx-tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(12px * var(--travel))) scale(calc(1 - 0.08 * var(--travel)));
+  }
+}
+
+/* A bar or a meter filling to its value from nothing. */
+@keyframes fx-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* A view replaced by its neighbour; `--dir` is 1 for forwards, -1 for back. */
+@keyframes fx-slide {
+  from {
+    opacity: 0;
+    transform: translateX(calc(18px * var(--dir, 1) * var(--travel)));
+  }
+}
+
+/* A digit replaced by the next one, rolling into place. */
+@keyframes fx-digit {
+  from {
+    opacity: 0;
+    transform: translateY(calc(42% * var(--dir, 1)));
+    filter: blur(2px);
+  }
+}
+
+/*
+ * A launch: a heartbeat. On `transform`, so it multiplies with the `scale` a
+ * hover has already applied instead of replacing it - and it starts and ends
+ * at 1, so it needs no fill and leaves nothing pinned.
+ */
+@keyframes fx-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  18% {
+    transform: scale(1.16);
+  }
+  38% {
+    transform: scale(0.92);
+  }
+  58% {
+    transform: scale(1.05);
+  }
+  78% {
+    transform: scale(0.99);
+  }
+}
+
+/* An SVG stroke drawing itself; the path needs `pathLength="1"`. */
+@keyframes fx-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes fx-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Something waiting for attention, breathing rather than blinking. */
+@keyframes fx-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}

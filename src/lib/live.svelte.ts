@@ -121,3 +121,53 @@ export function tell(
     onError?.(message);
   });
 }
+
+/**
+ * A sender that keeps only the newest command per target, one in flight at a
+ * time.
+ *
+ * A slider fires `input` for every step it moves, and each of those used to be
+ * its own host command. For volume that was a queue of stale levels replaying
+ * after the thumb had stopped; for brightness it was worse, because a monitor
+ * answers DDC/CI in tens of milliseconds and the backlog could run for seconds
+ * - the panel stuttered and the thumb jumped back as the echoes of old levels
+ * arrived. Now a drag sends the level it started at, then whatever the thumb
+ * reads when that one lands, and so on: always current, never queued.
+ *
+ * ```ts
+ * const send = coalesced('media');
+ * send(deviceId, () => invoke(SetVolumeLevel, { ... }));
+ * ```
+ */
+export function coalesced(label: string): (key: string, send: () => Promise<unknown>) => void {
+  const busy = new Set<string>();
+  const waiting = new Map<string, () => Promise<unknown>>();
+
+  function pump(key: string): void {
+    const send = waiting.get(key);
+    if (!send) {
+      busy.delete(key);
+      return;
+    }
+    waiting.delete(key);
+    busy.add(key);
+    let action: Promise<unknown>;
+    try {
+      action = send();
+    } catch (err) {
+      action = Promise.reject(err);
+    }
+    void action
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[${label}] command failed`, err);
+        noteError(`${label}: ${message}`);
+      })
+      .finally(() => pump(key));
+  }
+
+  return (key, send) => {
+    waiting.set(key, send);
+    if (!busy.has(key)) pump(key);
+  };
+}

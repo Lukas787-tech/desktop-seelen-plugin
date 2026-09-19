@@ -88,8 +88,8 @@
   .tabs button {
     flex: 1;
     padding: 4px 6px;
-    font-size: 11px;
-    border-radius: 6px;
+    font-size: calc(11px * var(--text-scale, 1));
+    border-radius: calc(6px * var(--round, 1));
     background: transparent;
     color: var(--panel-fg-muted);
     cursor: pointer;
@@ -101,7 +101,7 @@
   }
 
   .badge {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     opacity: 0.75;
   }
 
@@ -110,8 +110,8 @@
     width: 100%;
     padding: 6px 8px;
     font: inherit;
-    font-size: 12px;
-    border-radius: 8px;
+    font-size: calc(12px * var(--text-scale, 1));
+    border-radius: calc(8px * var(--round, 1));
     color: var(--panel-fg);
     background: color-mix(in oklab, var(--color-gray-100, #333) 45%, transparent);
   }
@@ -138,13 +138,13 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     padding: 2px 0;
   }
 
   li.empty {
     color: var(--panel-fg-muted);
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
   }
 
   li label {
@@ -171,21 +171,37 @@
     background: transparent;
     color: var(--panel-fg-muted);
     cursor: pointer;
-    font-size: 15px;
+    font-size: calc(15px * var(--text-scale, 1));
     line-height: 1;
     padding: 0 4px;
     opacity: 0;
+    translate: 4px 0;
+    transition:
+      opacity var(--dur-fast) var(--ease),
+      translate var(--dur) var(--ease-move),
+      color var(--dur-fast) var(--ease);
   }
 
   li:hover .remove {
     opacity: 1;
+    translate: 0 0;
+  }
+
+  .remove:hover {
+    color: var(--panel-fg);
+  }
+
+  /* A new todo rises into the list. */
+  li {
+    animation: fx-rise var(--dur-slow) var(--ease) backwards;
+    animation-delay: var(--lag, 0ms);
   }
 
   .clear {
     flex: none;
     background: transparent;
     color: var(--panel-fg-muted);
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     cursor: pointer;
     text-align: left;
   }

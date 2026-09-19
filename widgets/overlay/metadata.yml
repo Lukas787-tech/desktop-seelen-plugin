@@ -1,0 +1,41 @@
+id: "@ralfm/overlay"
+icon: PiGameControllerDuotone
+metadata:
+  displayName: !extend i18n/display_name.yml
+  description: !extend i18n/description.yml
+  tags:
+    - games
+    - overlay
+
+loader: ThirdParty
+preset: Overlay
+instances: Single
+
+# Nothing is created until the shortcut fires, and the preset hides it again on
+# focus loss, so an overlay nobody has summoned costs no memory.
+lazy: true
+hidden: false
+
+html: !include index.html
+js: !include index.js
+css: !include index.css
+
+shortcuts:
+  # A widget of its own, purely so this hotkey is unmistakable. A shortcut runs
+  # `widget trigger <id>` and nothing else - no arguments - so two shortcuts
+  # declared by one widget arrive identically; two *widgets* never do. The keys
+  # are yours to change here, which is what a custom hotkey is on this host.
+  - id: open-game-overlay
+    command: ["widget", "trigger", "@ralfm/overlay"]
+    label: Open the game overlay
+    description: >-
+      Brings up the overlay over whatever is running: the game you are in, the
+      clock, the way back to the launcher, and the other windows to switch to.
+      It holds the keyboard, so a controller can drive it - which is the one
+      thing the desktop surface cannot do while a game is in front.
+    defaultKeys: ["Win", "Alt", "G"]
+
+# Nothing to configure: what the overlay shows comes from the game library and
+# the open windows, its look comes from the theme like everything else here, and
+# its hotkey is set in Seelen's own shortcuts page rather than in a widget.
+settings: []

@@ -1,4 +1,4 @@
-import { hostValue, tell } from './live.svelte';
+import { coalesced, hostValue, tell } from './live.svelte';
 import { SeelenCommand, SeelenEvent, invoke, subscribe } from './seelen';
 import type { MonitorBrightness, RadioDevice } from '@seelen-ui/lib/types';
 
@@ -46,11 +46,14 @@ export function setBrightness(monitor: MonitorBrightness, wanted: number): void 
   for (const candidate of levels) {
     if (Math.abs(candidate - wanted) < Math.abs(level - wanted)) level = candidate;
   }
-  tell('brightness', invoke(SeelenCommand.SetMonitorBrightness, {
-    instanceName: monitor.instanceName,
-    level,
-  }));
+  // DDC/CI takes tens of milliseconds per request, so a dragged slider only
+  // ever sends the newest level; see `coalesced`.
+  sendBrightness(monitor.instanceName, () =>
+    invoke(SeelenCommand.SetMonitorBrightness, { instanceName: monitor.instanceName, level }),
+  );
 }
+
+const sendBrightness = coalesced('brightness');
 
 export function setRadio(device: RadioDevice, enabled: boolean): void {
   tell('radios', invoke(SeelenCommand.SetRadioState, { kind: device.kind, enabled }));

@@ -7,6 +7,11 @@
  * repeating them in every module's scoped block is what keeps a new module
  * short - and what stops the fifteenth one drifting a pixel from the first.
  *
+ * The same goes for how they move. Every row arrives, every button springs
+ * back from a press, every bar glides to its value - here, once, on the tokens
+ * in `motion.css` - so thirty-two modules share one feel without any of them
+ * having to ask for it.
+ *
  * The `m-` prefix is deliberate: this file is global, so a bare `.row` would
  * also match a `.row` inside a component's own styles.
  */
@@ -44,14 +49,48 @@
   align-items: center;
   gap: calc(8px * var(--density));
   padding: calc(4px * var(--density)) calc(6px * var(--density));
-  border-radius: 7px;
-  font-size: 12px;
+  border-radius: calc(7px * var(--round, 1));
+  font-size: calc(12px * var(--text-scale, 1));
   min-width: 0;
   text-align: left;
   color: var(--panel-fg);
   background: transparent;
   border: 0;
   font-family: inherit;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    scale var(--dur) var(--ease-spring);
+}
+
+/*
+ * Rows arrive rather than appear: when a list first renders, when a tab swaps
+ * one list for another, and when a single entry joins a live one.
+ *
+ * An animation rather than a transition, so it plays on insertion and never
+ * again when a row merely changes. `backwards` holds each row invisible
+ * through its stagger delay and then lets go, so nothing stays pinned after.
+ * `--lag` is the panel's own place in the surface's opening wave (see
+ * `Panel.svelte`), so its rows wait for the glass they sit on.
+ */
+.m-row,
+.m-empty,
+.m-label,
+.m-facts > div {
+  animation: fx-rise var(--dur-slow) var(--ease) backwards;
+  animation-delay: calc(var(--lag, 0ms) + var(--nth, 0) * var(--step) * 0.6);
+}
+
+/*
+ * Each row one step behind the one above it, up to the fifteenth. Guarded:
+ * `sibling-index()` in a runtime that lacked it would invalidate the delay
+ * above along with it, and every row would then wait for nothing.
+ */
+@supports (order: sibling-index()) {
+  .m-row,
+  .m-facts > div {
+    --nth: min(sibling-index() - 1, 14);
+  }
 }
 
 /* Rows that do something respond to the pointer; static ones must not. */
@@ -65,6 +104,13 @@ button.m-row:hover,
 .m-row.m-click:hover,
 button.m-row:focus-visible {
   background: color-mix(in oklab, var(--color-gray-300, #666) 26%, transparent);
+}
+
+/* Pressed in quickly, sprung back out on release. */
+button.m-row:active,
+.m-row.m-click:active {
+  scale: 0.985;
+  transition-duration: var(--dur-fast);
 }
 
 .m-row.m-active {
@@ -87,13 +133,13 @@ button.m-row:focus-visible {
 }
 
 .m-sub {
-  font-size: 10px;
+  font-size: calc(10px * var(--text-scale, 1));
   color: var(--panel-fg-muted);
 }
 
 .m-value {
   flex: none;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale, 1));
   font-variant-numeric: tabular-nums;
 }
 
@@ -103,7 +149,7 @@ button.m-row:focus-visible {
 
 .m-empty {
   padding: 6px 0;
-  font-size: 11px;
+  font-size: calc(11px * var(--text-scale, 1));
   color: var(--panel-fg-muted);
 }
 
@@ -112,16 +158,30 @@ button.m-row:focus-visible {
   width: 18px;
   height: 18px;
   object-fit: contain;
-  border-radius: 3px;
+  border-radius: calc(3px * var(--round, 1));
+  transition: scale var(--dur) var(--ease-spring);
 }
 
 .m-glyph {
   flex: none;
   width: 18px;
   text-align: center;
-  font-size: 13px;
+  font-size: calc(13px * var(--text-scale, 1));
   line-height: 1;
   color: var(--panel-fg-muted);
+  transition:
+    scale var(--dur) var(--ease-spring),
+    color var(--dur-fast) var(--ease);
+}
+
+/* A row's icon leans toward the pointer as the row is hovered. */
+button.m-row:hover :is(.m-icon, .m-glyph),
+.m-row.m-click:hover :is(.m-icon, .m-glyph) {
+  scale: 1.14;
+}
+
+.m-row:hover .m-glyph {
+  color: var(--panel-fg);
 }
 
 .m-actions {
@@ -134,16 +194,27 @@ button.m-row:focus-visible {
 .m-btn {
   padding: calc(4px * var(--density)) calc(9px * var(--density));
   font: inherit;
-  font-size: 11px;
-  border-radius: 7px;
+  font-size: calc(11px * var(--text-scale, 1));
+  border-radius: calc(7px * var(--round, 1));
   border: 0;
   cursor: pointer;
   color: var(--panel-fg);
   background: color-mix(in oklab, var(--color-gray-300, #666) 22%, transparent);
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    opacity var(--dur-fast) var(--ease),
+    scale var(--dur) var(--ease-spring);
 }
 
 .m-btn:hover:not(:disabled) {
   background: color-mix(in oklab, var(--color-gray-300, #666) 38%, transparent);
+}
+
+.m-btn:active:not(:disabled) {
+  scale: 0.94;
+  transition-duration: var(--dur-fast);
 }
 
 .m-btn:disabled {
@@ -159,6 +230,12 @@ button.m-row:focus-visible {
   background: color-mix(in oklab, var(--accent, #7aa2f7) 45%, transparent);
 }
 
+/* A primary action brightens and glows in its own colour, rather than turning grey like the rest. */
+.m-btn.m-primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent, #7aa2f7) 62%, transparent);
+  box-shadow: 0 4px 16px color-mix(in oklab, var(--accent, #7aa2f7) 34%, transparent);
+}
+
 /* An icon-only affordance that stays out of the way until the row is hovered. */
 .m-quiet {
   flex: none;
@@ -166,42 +243,87 @@ button.m-row:focus-visible {
   border: 0;
   background: transparent;
   color: var(--panel-fg-muted);
-  font-size: 14px;
+  font-size: calc(14px * var(--text-scale, 1));
   line-height: 1;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.12s ease;
+  translate: 4px 0;
+  transition:
+    opacity var(--dur-fast) var(--ease),
+    translate var(--dur) var(--ease-move),
+    color var(--dur-fast) var(--ease),
+    scale var(--dur) var(--ease-spring);
 }
 
 .m-row:hover .m-quiet,
 .m-quiet:focus-visible {
   opacity: 1;
+  translate: 0 0;
 }
 
 .m-quiet:hover {
   color: var(--panel-fg);
 }
 
+.m-quiet:active {
+  scale: 0.85;
+}
+
 .m-bar {
-  height: 4px;
-  border-radius: 999px;
+  height: var(--bar-h, 4px);
+  border-radius: calc(999px * var(--round, 1));
   overflow: hidden;
   background: color-mix(in oklab, var(--color-gray-300, #666) 30%, transparent);
 }
 
+/* Fills from nothing when it first appears, then glides to each new value. */
 .m-bar > span {
   display: block;
   height: 100%;
   background: var(--accent, #7aa2f7);
+  transform-origin: left;
+  transition: width var(--dur-slow) var(--ease-smooth);
+  animation: fx-grow var(--dur-enter) var(--ease) backwards;
+  animation-delay: calc(var(--lag, 0ms) + var(--dur));
+}
+
+/*
+ * The Meter style setting. Drawn per bar from `--accent` as it stands on that
+ * bar, so a module given its own accent in a user stylesheet has its meters
+ * follow. A bar a module colours inline - a low battery in red - keeps its
+ * colour, because an inline style outranks all of these.
+ */
+body[data-bar='gradient'] .m-bar > span {
+  background: linear-gradient(90deg, var(--accent, #7aa2f7), var(--accent-2, #bb9af7));
+}
+
+body[data-bar='striped'] .m-bar > span {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--accent, #7aa2f7) 0 5px,
+    color-mix(in oklab, var(--accent, #7aa2f7) 55%, transparent) 5px 10px
+  );
+}
+
+body[data-bar='glow'] .m-bar {
+  overflow: visible;
+}
+
+body[data-bar='glow'] .m-bar > span {
+  border-radius: inherit;
+  box-shadow: 0 0 10px color-mix(in oklab, var(--accent, #7aa2f7) 70%, transparent);
 }
 
 .m-pill {
   flex: none;
   padding: 1px 7px;
-  border-radius: 999px;
-  font-size: 10px;
+  border-radius: calc(999px * var(--round, 1));
+  font-size: calc(10px * var(--text-scale, 1));
   color: var(--panel-fg-muted);
   background: color-mix(in oklab, var(--color-gray-300, #666) 24%, transparent);
+  transition:
+    background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
 }
 
 .m-pill.m-on {
@@ -214,12 +336,28 @@ button.m-row:focus-visible {
 .m-body textarea,
 .m-body select {
   font: inherit;
-  font-size: 12px;
+  font-size: calc(12px * var(--text-scale, 1));
   color: var(--panel-fg);
   border: 0;
-  border-radius: 7px;
+  border-radius: calc(7px * var(--round, 1));
   padding: 5px 8px;
   background: color-mix(in oklab, var(--color-gray-100, #333) 45%, transparent);
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+/*
+ * A focused field lights a soft ring in the accent. Written with `:where()` so
+ * it weighs no more than `:focus` itself: a module that draws its own focus
+ * treatment - the assistant's composer - keeps it.
+ */
+:where(.m-body) :where(input:not([type='range'], [type='checkbox']), textarea, select):focus {
+  outline: none;
+  background: color-mix(in oklab, var(--color-gray-100, #333) 62%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent, #7aa2f7) 55%, transparent),
+    0 0 0 4px color-mix(in oklab, var(--accent, #7aa2f7) 16%, transparent);
 }
 
 .m-body input[type='range'] {
@@ -234,14 +372,15 @@ button.m-row:focus-visible {
   appearance: none;
   width: 30px;
   height: 17px;
-  border-radius: 999px;
+  border-radius: calc(999px * var(--round, 1));
   position: relative;
   cursor: pointer;
   padding: 0;
   background: color-mix(in oklab, var(--color-gray-300, #666) 35%, transparent);
-  transition: background 0.15s ease;
+  transition: background-color var(--dur) var(--ease);
 }
 
+/* The knob springs across, and stretches toward where it is going while held. */
 .m-switch::after {
   content: '';
   position: absolute;
@@ -249,9 +388,16 @@ button.m-row:focus-visible {
   left: 2px;
   width: 13px;
   height: 13px;
-  border-radius: 50%;
+  border-radius: calc(999px * var(--round, 1));
   background: #fff;
-  transition: transform 0.15s ease;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  transition:
+    transform var(--dur-slow) var(--ease-spring),
+    width var(--dur) var(--ease-move);
+}
+
+.m-switch:active::after {
+  width: 17px;
 }
 
 .m-switch:checked {
@@ -260,4 +406,185 @@ button.m-row:focus-visible {
 
 .m-switch:checked::after {
   transform: translateX(13px);
+}
+
+.m-switch:checked:active::after {
+  transform: translateX(9px);
+}
+
+/* --------------------------------------------------------------------------
+ * Shared by the newer, larger modules. Same rules as above: global, `m-`
+ * prefixed, every pad multiplied by `--density`.
+ * ------------------------------------------------------------------------ */
+
+/* A segmented switch between a module's views. */
+.m-tabs {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: calc(9px * var(--round, 1));
+  background: color-mix(in oklab, var(--color-gray-300, #666) 16%, transparent);
+  position: relative;
+  isolation: isolate;
+  /* Each strip's pill finds its own selected tab, not another panel's. */
+  anchor-scope: --m-tab;
+}
+
+.m-tabs > button {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: calc(4px * var(--density)) 6px;
+  font: inherit;
+  font-size: calc(11px * var(--text-scale, 1));
+  font-weight: 500;
+  border: 0;
+  border-radius: calc(7px * var(--round, 1));
+  background: transparent;
+  color: var(--panel-fg-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    scale var(--dur) var(--ease-spring);
+}
+
+.m-tabs > button:hover {
+  color: var(--panel-fg);
+}
+
+.m-tabs > button:active {
+  scale: 0.95;
+  transition-duration: var(--dur-fast);
+}
+
+.m-tabs > button.m-on {
+  background: color-mix(in oklab, var(--color-gray-300, #666) 36%, transparent);
+  color: var(--panel-fg);
+}
+
+/*
+ * One pill that slides to whichever tab is chosen, instead of a background
+ * each tab switches on. It is anchored to the selected tab, and an inset
+ * written with `anchor()` transitions when the anchor moves - so the pill
+ * travels there on its own, whatever the module, however many tabs.
+ *
+ * `::after`, not `::before`: an anchor must come before the element anchored
+ * to it when both share a containing block.
+ */
+@supports (anchor-name: --m-tab) {
+  .m-tabs > button.m-on {
+    anchor-name: --m-tab;
+    background: transparent;
+  }
+
+  .m-tabs::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    position-anchor: --m-tab;
+    top: anchor(top);
+    right: anchor(right);
+    bottom: anchor(bottom);
+    left: anchor(left);
+    border-radius: calc(7px * var(--round, 1));
+    background: color-mix(in oklab, var(--color-gray-300, #666) 36%, transparent);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.16);
+    transition:
+      top var(--dur-slow) var(--ease-move),
+      right var(--dur-slow) var(--ease-move),
+      bottom var(--dur-slow) var(--ease-move),
+      left var(--dur-slow) var(--ease-move),
+      opacity var(--dur) var(--ease);
+  }
+
+  .m-tabs:not(:has(> .m-on))::after {
+    opacity: 0;
+  }
+}
+
+/* A small tappable preset or filter. */
+.m-chip {
+  flex: none;
+  padding: calc(2px * var(--density)) 8px;
+  font: inherit;
+  font-size: calc(11px * var(--text-scale, 1));
+  border: 0;
+  border-radius: calc(999px * var(--round, 1));
+  cursor: pointer;
+  color: var(--panel-fg);
+  background: color-mix(in oklab, var(--color-gray-300, #666) 22%, transparent);
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    scale var(--dur) var(--ease-spring);
+}
+
+.m-chip:hover {
+  background: color-mix(in oklab, var(--color-gray-300, #666) 38%, transparent);
+}
+
+.m-chip:active {
+  scale: 0.92;
+  transition-duration: var(--dur-fast);
+}
+
+.m-chip.m-on {
+  background: color-mix(in oklab, var(--accent, #7aa2f7) 45%, transparent);
+}
+
+/* The one big number a panel is read for. */
+.m-stat {
+  font-family: var(--display-font);
+  font-weight: var(--display-weight, 200);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* A section label inside a list. */
+.m-label {
+  padding: calc(6px * var(--density)) 6px 2px;
+  font-size: calc(9px * var(--text-scale, 1));
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--panel-fg-muted);
+}
+
+/* A region that scrolls on its own. Both axes declared: see the README on
+   why `overflow-y` alone turns the other one into a scroller too. */
+.m-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Rows of a long list skip layout and paint while scrolled out of view, which
+   is what keeps a few hundred apps or cards from costing anything off-screen. */
+.m-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 30px;
+}
+
+/* A key/value grid of small facts. */
+.m-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: calc(6px * var(--density)) 10px;
+}
+
+.m-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }

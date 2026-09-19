@@ -52,14 +52,31 @@
  */
 const MAX_LUMA = 0.55;
 
+/**
+ * The same limit from the other side, for a light colour scheme: its ink is
+ * dark, so the glass it sits on must not be. A light scheme over a dark
+ * wallpaper would otherwise send a navy dock with near-black labels on it.
+ */
+const MIN_LUMA = 0.62;
+
 type Rgb = [number, number, number];
 
 function luma([r, g, b]: Rgb): number {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
-function readable(colour: Rgb, ground: Rgb): Rgb {
+/** Which ink the shell's text is in: light (every dark theme and scheme) or dark. */
+export type Ink = 'light' | 'dark';
+
+function readable(colour: Rgb, ground: Rgb, ink: Ink = 'light'): Rgb {
   const bright = luma(colour);
+  if (ink === 'dark') {
+    if (bright >= MIN_LUMA) return colour;
+    const ceiling = luma(ground);
+    if (ceiling <= bright) return colour;
+    const t = Math.min(1, (MIN_LUMA - bright) / (ceiling - bright));
+    return colour.map((v, i) => v * (1 - t) + (ground[i] as number) * t) as Rgb;
+  }
   if (bright <= MAX_LUMA) return colour;
   const floor = luma(ground);
   if (floor >= bright) return colour;
@@ -88,10 +105,27 @@ function resolveColour(expr: string): [number, number, number] | null {
   const probe = document.createElement('div');
   probe.style.backgroundColor = `color-mix(in oklab, ${expr} 100%, transparent)`;
   document.body.appendChild(probe);
-  const parts = getComputedStyle(probe).backgroundColor.match(/[\d.]+/g);
+  const css = getComputedStyle(probe).backgroundColor;
   probe.remove();
-  if (!parts || parts.length < 3) return null;
-  return [Number(parts[0]), Number(parts[1]), Number(parts[2])];
+
+  /*
+   * Painted rather than parsed. A `color-mix` serialises in the space it was
+   * mixed in - `oklab(0.98 0.001 0.02)`, not `rgb(...)` - and reading the
+   * digits out of that as bytes turned a near-white Catppuccin Latte ground
+   * into `rgb(1, 0, 0)`: a black dock under a light scheme. A one-pixel canvas
+   * accepts any colour syntax the engine does and hands back sRGB bytes.
+   */
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.fillStyle = 'rgb(0 0 0 / 0)';
+  ctx.fillStyle = css;
+  ctx.fillRect(0, 0, 1, 1);
+  const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+  if (!a) return null;
+  return [r as number, g as number, b as number];
 }
 
 /** Loads an image for pixel reading, preferring a CORS-clean fetch. */
@@ -132,6 +166,58 @@ function average(img: HTMLImageElement): [number, number, number] | null {
   return [r / n, g / n, b / n];
 }
 
+type Mean = { mean: Rgb } | { failure: string };
+
+/**
+ * Averages already taken, by wallpaper URL.
+ *
+ * The average depends only on the image, but the tint is recomputed whenever
+ * the panel opacity changes - and dragging that slider changes it on every
+ * input event. Without this each tick re-fetched and re-decoded the whole
+ * wallpaper, a 4K image, to arrive at the same three numbers. Holding the
+ * promise rather than the result also folds a burst of ticks into one decode.
+ * A slideshow cycles through a handful of stills, so a few are kept.
+ */
+const means = new Map<string, Promise<Mean>>();
+const MEANS_KEPT = 6;
+
+function averageOf(url: string): Promise<Mean> {
+  const cached = means.get(url);
+  if (cached) return cached;
+
+  const pending = (async (): Promise<Mean> => {
+    let img: HTMLImageElement;
+    try {
+      img = await load(url, true);
+    } catch {
+      try {
+        img = await load(url, false);
+      } catch {
+        return { failure: 'wallpaper did not load' };
+      }
+    }
+    try {
+      const mean = average(img);
+      return mean ? { mean } : { failure: 'no 2d context' };
+    } catch (err) {
+      return { failure: `canvas tainted: ${String(err)}` };
+    }
+  })();
+
+  means.set(url, pending);
+  // A failed load may succeed later (a wallpaper still being written), so only
+  // a measured average is worth keeping.
+  void pending.then((result) => {
+    if ('failure' in result) means.delete(url);
+  });
+  while (means.size > MEANS_KEPT) {
+    const oldest = means.keys().next().value;
+    if (oldest === undefined) break;
+    means.delete(oldest);
+  }
+  return pending;
+}
+
 /**
  * The colour this surface's panels are showing, given the wallpaper behind
  * them and the panel opacity they are drawn at.
@@ -140,36 +226,24 @@ function average(img: HTMLImageElement): [number, number, number] | null {
  *               sampling a frame would mean the colour changed continuously,
  *               and every change here is a write to the settings file.
  * @param alpha  The surface's own panel opacity, 0-1.
+ * @param ink    The shell's text colour: `dark` under a light colour scheme,
+ *               which moves the readability limit to the other end.
  */
 export async function sampleWallpaperTint(
   url: string | null,
   alpha: number,
+  ink: Ink = 'light',
 ): Promise<TintResult> {
   if (!url) return { tint: null, note: 'no wallpaper' };
 
-  let img: HTMLImageElement;
-  try {
-    img = await load(url, true);
-  } catch {
-    try {
-      img = await load(url, false);
-    } catch {
-      return { tint: null, note: 'wallpaper did not load' };
-    }
-  }
-
-  let mean: [number, number, number] | null;
-  try {
-    mean = average(img);
-  } catch (err) {
-    return { tint: null, note: `canvas tainted: ${String(err)}` };
-  }
-  if (!mean) return { tint: null, note: 'no 2d context' };
+  const measured = await averageOf(url);
+  if ('failure' in measured) return { tint: null, note: measured.failure };
+  const mean = measured.mean;
 
   const ground = (resolveColour('var(--panel-ground)') ?? [22, 22, 30]) as Rgb;
   const a = Math.min(1, Math.max(0, alpha));
   const mix = mean.map((c, i) => c * (1 - a) + (ground[i] as number) * a) as Rgb;
-  const [r, g, b] = readable(mix, ground).map(Math.round);
+  const [r, g, b] = readable(mix, ground, ink).map(Math.round);
 
   return { tint: `rgb(${r}, ${g}, ${b})`, note: 'measured' };
 }

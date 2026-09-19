@@ -66,7 +66,18 @@ namespace SeelenDesktopSurface
         const string Publisher = "Lukas787-tech";
         const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + ProductKey;
         const string ThemeId = "@ralfm/surface";
-        static readonly string[] WidgetIds = { "@ralfm/desktop", "@ralfm/palette" };
+        /// <summary>
+        /// What ships, in one place. These were written out separately in the
+        /// install, the switch-on, the uninstall and the build's own check, which
+        /// is how a third widget came to be added to two of the four.
+        /// </summary>
+        internal static readonly string[] WidgetIds = { "@ralfm/desktop", "@ralfm/palette", "@ralfm/overlay" };
+
+        /// <summary>The folder each of those is installed as; same order.</summary>
+        internal static readonly string[] WidgetFolders = { "ralfm-desktop", "ralfm-palette", "ralfm-overlay" };
+
+        /// <summary>Their names in Seelen's own settings, for the instructions shown when it cannot switch them on itself.</summary>
+        const string WidgetNames = "Desktop, Command palette and Game overlay";
 
         /// <summary>
         /// Whether Seelen counts a widget it has no settings entry for as switched
@@ -222,8 +233,7 @@ namespace SeelenDesktopSurface
             try
             {
                 Directory.CreateDirectory(seelen.DataDir);
-                Place(seelen, payload, "widget", "ralfm-desktop");
-                Place(seelen, payload, "widget", "ralfm-palette");
+                foreach (var folder in WidgetFolders) Place(seelen, payload, "widget", folder);
                 if (options.Theme) Place(seelen, payload, "theme", "ralfm-surface");
                 try
                 {
@@ -317,7 +327,7 @@ namespace SeelenDesktopSurface
             if (!File.Exists(file))
             {
                 log("Seelen has not saved its settings yet. Start Seelen UI once; if the surface does not appear,");
-                log("switch on Desktop and Command palette under Widgets in Seelen's settings.");
+                log("switch on " + WidgetNames + " under Widgets in Seelen's settings.");
                 return;
             }
             if (SeelenSettings.Apply(ReadSettings(file), WidgetIds, themeId, MissingEntryMeansEnabled).Count == 0)
@@ -359,7 +369,7 @@ namespace SeelenDesktopSurface
 
         static string ManualSwitchOn(bool theme)
         {
-            return "Not switched on yet. In Seelen's settings, turn on Desktop and Command palette under Widgets"
+            return "Not switched on yet. In Seelen's settings, turn on " + WidgetNames + " under Widgets"
                 + (theme ? ", and the Desktop Surface theme under Themes, below the default theme." : ".");
         }
 
@@ -552,7 +562,11 @@ namespace SeelenDesktopSurface
 
         public void Uninstall(SeelenInfo seelen, bool quiet)
         {
-            foreach (var item in new[] { new[] { "widget", "ralfm-desktop" }, new[] { "widget", "ralfm-palette" }, new[] { "theme", "ralfm-surface" } })
+            var installed = new List<string[]>();
+            foreach (var folder in WidgetFolders) installed.Add(new[] { "widget", folder });
+            installed.Add(new[] { "theme", "ralfm-surface" });
+
+            foreach (var item in installed)
             {
                 var dest = Path.Combine(seelen.DataDir, item[0] + "s", item[1]);
                 if (!Directory.Exists(dest)) continue;
@@ -573,6 +587,7 @@ namespace SeelenDesktopSurface
             {
                 TryDelete(data);
                 TryDelete(Path.Combine(seelen.DataDir, @"data\ralfm-palette"));
+                TryDelete(Path.Combine(seelen.DataDir, @"data\ralfm-overlay"));
                 log("Removed the surface's data.");
             }
 
@@ -1009,7 +1024,7 @@ namespace SeelenDesktopSurface
         static int SettingsTest(string input, string output)
         {
             var root = (JsonObject)Json.Parse(File.ReadAllText(input, Encoding.UTF8));
-            var changes = SeelenSettings.Apply(root, new[] { "@ralfm/desktop", "@ralfm/palette" }, "@ralfm/surface", Installer.MissingEntryMeansEnabled);
+            var changes = SeelenSettings.Apply(root, Installer.WidgetIds, "@ralfm/surface", Installer.MissingEntryMeansEnabled);
             File.WriteAllText(output, Json.Write(root), new UTF8Encoding(false));
             return changes.Count;
         }

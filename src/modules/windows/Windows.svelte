@@ -101,7 +101,7 @@
 <style>
   .group {
     padding: 6px 6px 2px;
-    font-size: 9px;
+    font-size: calc(9px * var(--text-scale, 1));
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -120,7 +120,7 @@
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     text-align: left;
     cursor: pointer;
   }

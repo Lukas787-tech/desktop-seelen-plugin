@@ -96,8 +96,8 @@
 
   .actions button {
     padding: 6px 12px;
-    font-size: 12px;
-    border-radius: 8px;
+    font-size: calc(12px * var(--text-scale, 1));
+    border-radius: calc(8px * var(--round, 1));
     background: color-mix(in oklab, var(--color-gray-300, #666) 20%, transparent);
     color: var(--panel-fg);
     cursor: pointer;
@@ -108,13 +108,13 @@
   }
 
   .hint {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     margin-bottom: 8px;
   }
 
   .error {
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     color: var(--color-red-700, #f77);
     margin-bottom: 8px;
   }
@@ -130,7 +130,7 @@
     width: 100%;
     padding: 0;
     background: transparent;
-    border-radius: 10px;
+    border-radius: calc(10px * var(--round, 1));
     overflow: hidden;
     cursor: pointer;
     display: flex;
@@ -157,7 +157,7 @@
     justify-content: space-between;
     gap: 6px;
     padding: 5px 7px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg);
   }
 
@@ -168,9 +168,9 @@
   }
 
   .tag {
-    font-size: 9px;
+    font-size: calc(9px * var(--text-scale, 1));
     padding: 1px 5px;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     color: var(--panel-fg-muted);
     background: color-mix(in oklab, var(--color-gray-300, #666) 34%, transparent);
     flex: none;

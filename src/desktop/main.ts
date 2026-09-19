@@ -4,6 +4,7 @@ import { fitToOwnMonitor } from '$lib/surface';
 import { installErrorCapture } from '$lib/diagnostics';
 import Surface from './Surface.svelte';
 import '../styles/base.css';
+import '../styles/motion.css';
 import '../styles/fill.css';
 import '../styles/modules.css';
 

@@ -1,4 +1,7 @@
+import type { PadLayout } from './gamepad';
+import type { TranslationPreset } from './padkeys';
 import type { ProviderId } from './providers';
+import type { SchemeId } from './schemes';
 import { noteError } from './diagnostics';
 import {
   SeelenCommand,
@@ -29,23 +32,65 @@ export interface DesktopConfig {
 
   fontFamily: string;
   displayFont: string;
+  /** Code, the calculator's tape and anything else set in a fixed pitch. */
+  monoFont: string;
   fontSize: number;
-  titleStyle: 'caps' | 'plain' | 'hidden';
+  fontWeight: number;
+  /** The clock, the timer and every other big number. */
+  displayWeight: number;
+  /** Hundredths of an em, so it scales with the text it spaces. */
+  letterSpacing: number;
+  textShadow: boolean;
+  titleStyle: 'caps' | 'plain' | 'lower' | 'hidden';
+  titleDecor: 'none' | 'bracket' | 'underline' | 'tab' | 'bar' | 'dot';
+  titleAlign: 'left' | 'center' | 'right';
+  titleWeight: number;
 
   followTheme: boolean;
+  /** A named palette that remaps Seelen's colour ramp; `theme` leaves it alone. See `schemes.ts`. */
+  colorScheme: SchemeId;
+  /** The two colours a `custom` scheme is mixed from. */
+  schemeGround: string;
+  schemeInk: string;
+  /** Take the accents from the scheme rather than from the pickers below. */
+  schemeAccent: boolean;
   surfaceHue: number;
   surfaceChroma: number;
   panelOpacity: number;
   panelBlur: number;
+  /** Percent; 100 leaves the backdrop's colour as it is. */
+  backdropSaturation: number;
   panelBorder: number;
-  panelShadow: 'none' | 'soft' | 'medium' | 'deep';
+  panelBorderWidth: number;
+  panelBorderStyle: 'solid' | 'dashed' | 'dotted' | 'double' | 'groove' | 'ridge' | 'inset' | 'outset';
+  panelBorderColor: 'neutral' | 'ink' | 'accent' | 'gradient';
+  /** Turns a gradient edge slowly round the panel. */
+  borderAnimation: boolean;
+  panelShadow: 'none' | 'soft' | 'medium' | 'deep' | 'hard' | 'block' | 'glow';
+  panelFill: 'flat' | 'gradient' | 'accent';
   panelTexture: boolean;
   cornerRadius: number;
+  panelPadding: number;
+  /** The light that follows the pointer across a panel. */
+  panelGlow: boolean;
   density: 'compact' | 'cosy' | 'roomy';
+  /** How round every button, field, chip and track is, independent of the panel corners. */
+  controlShape: 'square' | 'subtle' | 'rounded' | 'round' | 'pill';
   iconRadius: number;
+  iconLabelStyle: 'shadow' | 'pill' | 'plain';
+  barThickness: number;
+  barStyle: 'solid' | 'gradient' | 'striped' | 'glow';
+  scrollbars: 'thin' | 'hidden' | 'auto';
   accentColor: string;
+  accentColor2: string;
   animations: boolean;
+  /** Percent of the tuned durations: 200 takes twice as long. */
+  motionScale: number;
+  staggerScale: number;
+  entranceStyle: 'rise' | 'fade' | 'zoom' | 'drop' | 'slide' | 'blur' | 'none';
   styleShell: boolean;
+  /** A stylesheet of the user's own, applied after everything else. */
+  customCss: string;
 
   wallpaperEnabled: boolean;
   wallpaperFit: 'cover' | 'contain' | 'fill' | 'none';
@@ -80,6 +125,18 @@ export interface DesktopConfig {
   moduleFiles: boolean;
   moduleGames: boolean;
   moduleChat: boolean;
+  moduleWeather: boolean;
+  moduleAgenda: boolean;
+  moduleAlarms: boolean;
+  modulePerf: boolean;
+  moduleUsage: boolean;
+  moduleApps: boolean;
+  moduleBoard: boolean;
+  moduleHabits: boolean;
+  moduleCalc: boolean;
+  moduleTray: boolean;
+  moduleLinks: boolean;
+  moduleBrowser: boolean;
 
   clock24h: boolean;
   clockShowSeconds: boolean;
@@ -179,6 +236,76 @@ export interface DesktopConfig {
   gamesHoverZoom: boolean;
   gamesShowMissing: boolean;
 
+  /**
+   * The display game mode takes over, by monitor id; blank means the primary
+   * one. Not `allowSetByMonitor`: every replica has to agree which of them owns
+   * the launcher, and a per-display override is exactly how two of them would
+   * come to disagree.
+   */
+  gameModeDisplay: string;
+  /** Switch the chosen display into the launcher as soon as the surface starts. */
+  gameModeAtStart: boolean;
+  gameModeLayout: 'shelf' | 'grid' | 'wall';
+  gameModeTileSize: number;
+  gameModeArtShape: 'square' | 'portrait' | 'wide';
+  /** How a tile is faced. Every tile shares one surface; this is what is on it. */
+  gameModeArtStyle: 'icon' | 'cover' | 'plain';
+  /** What fills the screen behind the shelves. */
+  gameModeBackdrop: 'art' | 'wallpaper' | 'plain';
+  gameModeBackdropDim: number;
+  gameModeBackdropBlur: number;
+  gameModeShowHero: boolean;
+  gameModeShowClock: boolean;
+  /** The row of button hints along the bottom. */
+  gameModeShowLegend: boolean;
+  gameModeShowStats: boolean;
+  /** The AI-written one-liner, where the library has one. See `blurb.ts`. */
+  gameModeShowBlurb: boolean;
+  gameModeShowSearch: boolean;
+  gameModeRecentCount: number;
+  gameModeSort: 'recent' | 'name' | 'played' | 'launcher';
+  gameModeFavouritesFirst: boolean;
+  gameModeShowApps: boolean;
+  gameModeShowPower: boolean;
+  /** What a launch does to the launcher itself. */
+  gameModeOnLaunch: 'stay' | 'leave';
+  /** Take the keyboard back when something else grabs it; see `gamemode.svelte.ts`. */
+  gameModeKeepFocus: boolean;
+  gameModeHideCursor: boolean;
+  gameModeAnimate: boolean;
+
+  padEnabled: boolean;
+  /** Which family's glyphs the hints are drawn with. */
+  padLayout: PadLayout;
+  /** `action=button` pairs; blank is the console default. See `gamepad.ts`. */
+  padBindings: string;
+  /** Percent, so it can be a slider; 25 is a quarter of the stick's travel. */
+  padDeadzone: number;
+  /** Hundredths: 160 is an exponent of 1.6, which sharpens the centre. */
+  padCurve: number;
+  padStickNavigates: boolean;
+  padStickThreshold: number;
+  padRepeatDelay: number;
+  padRepeatInterval: number;
+  padRepeatMin: number;
+  padTriggerThreshold: number;
+  padRumble: boolean;
+  padRumbleStrength: number;
+
+  /** Let the pad drive the ordinary desktop, not only game mode. */
+  padDesktop: boolean;
+  padPreset: TranslationPreset;
+  /** `button=key` pairs applied over the preset. See `padkeys.ts`. */
+  padCustomKeys: string;
+  padPointer: boolean;
+  padPointerSpeed: number;
+  padPointerAccel: number;
+  padPointerSize: number;
+  /** Seconds of stillness before the drawn pointer fades; 0 keeps it. */
+  padPointerHide: number;
+  padStickScrolls: boolean;
+  padScrollSpeed: number;
+
   /** Which service answers. The API key itself is not a setting - see `chat.svelte.ts`. */
   chatProvider: ProviderId;
   /** Blank follows the provider's own default. */
@@ -191,6 +318,69 @@ export interface DesktopConfig {
   chatTools: boolean;
   /** Prepend a short description of the machine to every turn. */
   chatContext: boolean;
+
+  /** The label of a place, e.g. `Berlin, Germany`; blank asks in the panel. */
+  weatherPlace: string;
+  weatherUnits: 'metric' | 'imperial';
+  weatherDays: number;
+  weatherShowHourly: boolean;
+  weatherShowDetails: boolean;
+
+  agendaDaysAhead: number;
+  agendaShowWeek: boolean;
+  agendaReminders: boolean;
+  /** Minutes before, as a string so it can be a select; `none` for no reminder. */
+  agendaDefaultRemind: 'none' | '0' | '5' | '10' | '15' | '30' | '60';
+  agendaMonthFirst: boolean;
+
+  alarmsDefaultTab: 'timers' | 'stopwatch' | 'alarms';
+  alarmsRings: number;
+  alarmsVolume: number;
+  alarms24h: boolean;
+
+  perfDefaultTab: 'cpu' | 'memory' | 'disk' | 'network';
+  perfShowCores: boolean;
+  perfFillGraph: boolean;
+  perfShowGrid: boolean;
+
+  usageIdleMinutes: number;
+  usageShowWeek: boolean;
+  usageMax: number;
+  /** Comma-separated application names that are never counted. */
+  usageIgnore: string;
+
+  appsView: 'list' | 'grid';
+  appsShowFavourites: boolean;
+  appsShowRecent: boolean;
+  appsShowAll: boolean;
+  appsTileSize: number;
+
+  boardColumnWidth: number;
+  boardShowDue: boolean;
+  boardShowNotes: boolean;
+  boardCompact: boolean;
+
+  habitsDays: number;
+  habitsShowStreak: boolean;
+  habitsShowHeatmap: boolean;
+
+  calcShowKeypad: boolean;
+  calcAngle: 'deg' | 'rad';
+  calcPrecision: number;
+  calcGrouping: boolean;
+
+  trayIconSize: number;
+  trayShowLabels: boolean;
+  trayShowHidden: boolean;
+
+  linksEngine: 'google' | 'duckduckgo' | 'bing' | 'brave' | 'startpage' | 'ecosia' | 'kagi';
+  linksShowSearch: boolean;
+  linksShowLabels: boolean;
+  linksTileSize: number;
+
+  browserReader: boolean;
+  browserShowNav: boolean;
+  browserZoom: number;
 }
 
 export type ConfigKey = keyof DesktopConfig;
@@ -208,22 +398,52 @@ export const DEFAULT_CONFIG: DesktopConfig = {
   labelMode: 'always',
   fontFamily: '',
   displayFont: '',
+  monoFont: '',
   fontSize: 14,
+  fontWeight: 400,
+  displayWeight: 200,
+  letterSpacing: 0,
+  textShadow: false,
   titleStyle: 'caps',
+  titleDecor: 'none',
+  titleAlign: 'left',
+  titleWeight: 600,
   followTheme: true,
+  colorScheme: 'theme',
+  schemeGround: '#1e1e2e',
+  schemeInk: '#cdd6f4',
+  schemeAccent: true,
   surfaceHue: 240,
   surfaceChroma: 0,
   panelOpacity: 60,
   panelBlur: 20,
+  backdropSaturation: 100,
   panelBorder: 34,
+  panelBorderWidth: 1,
+  panelBorderStyle: 'solid',
+  panelBorderColor: 'neutral',
+  borderAnimation: false,
   panelShadow: 'soft',
+  panelFill: 'flat',
   panelTexture: true,
   cornerRadius: 16,
+  panelPadding: 12,
+  panelGlow: true,
   density: 'cosy',
+  controlShape: 'rounded',
   iconRadius: 10,
+  iconLabelStyle: 'shadow',
+  barThickness: 4,
+  barStyle: 'solid',
+  scrollbars: 'thin',
   accentColor: '#7aa2f7',
+  accentColor2: '#bb9af7',
   animations: true,
+  motionScale: 100,
+  staggerScale: 100,
+  entranceStyle: 'rise',
   styleShell: true,
+  customCss: '',
   wallpaperEnabled: true,
   wallpaperFit: 'cover',
   wallpaperBlur: 0,
@@ -259,6 +479,18 @@ export const DEFAULT_CONFIG: DesktopConfig = {
   moduleFiles: false,
   moduleGames: false,
   moduleChat: false,
+  moduleWeather: false,
+  moduleAgenda: false,
+  moduleAlarms: false,
+  modulePerf: false,
+  moduleUsage: false,
+  moduleApps: false,
+  moduleBoard: false,
+  moduleHabits: false,
+  moduleCalc: false,
+  moduleTray: false,
+  moduleLinks: false,
+  moduleBrowser: false,
   clock24h: true,
   clockShowSeconds: false,
   clockShowDate: true,
@@ -337,6 +569,55 @@ export const DEFAULT_CONFIG: DesktopConfig = {
   gamesShowRunning: true,
   gamesHoverZoom: true,
   gamesShowMissing: false,
+  gameModeDisplay: '',
+  gameModeAtStart: false,
+  gameModeLayout: 'shelf',
+  gameModeTileSize: 200,
+  gameModeArtShape: 'square',
+  gameModeArtStyle: 'icon',
+  gameModeBackdrop: 'wallpaper',
+  gameModeBackdropDim: 62,
+  gameModeBackdropBlur: 40,
+  gameModeShowHero: true,
+  gameModeShowClock: true,
+  gameModeShowLegend: true,
+  gameModeShowStats: true,
+  gameModeShowBlurb: true,
+  gameModeShowSearch: true,
+  gameModeRecentCount: 12,
+  gameModeSort: 'recent',
+  gameModeFavouritesFirst: true,
+  gameModeShowApps: true,
+  gameModeShowPower: true,
+  gameModeOnLaunch: 'stay',
+  gameModeKeepFocus: true,
+  gameModeHideCursor: true,
+  gameModeAnimate: true,
+  padEnabled: true,
+  padLayout: 'auto',
+  padBindings: '',
+  padDeadzone: 25,
+  padCurve: 160,
+  padStickNavigates: true,
+  padStickThreshold: 55,
+  padRepeatDelay: 420,
+  padRepeatInterval: 140,
+  padRepeatMin: 60,
+  padTriggerThreshold: 50,
+  padRumble: true,
+  padRumbleStrength: 35,
+  // Off by default: it holds the keyboard away from whatever the user is
+  // actually working in, which is only what they want once they have asked.
+  padDesktop: false,
+  padPreset: 'navigation',
+  padCustomKeys: '',
+  padPointer: true,
+  padPointerSpeed: 1100,
+  padPointerAccel: 190,
+  padPointerSize: 22,
+  padPointerHide: 3,
+  padStickScrolls: true,
+  padScrollSpeed: 14,
   chatProvider: 'ollama',
   chatModel: '',
   // A panel this size rewards a model that answers rather than one that opens
@@ -347,6 +628,54 @@ export const DEFAULT_CONFIG: DesktopConfig = {
   chatRouting: true,
   chatTools: true,
   chatContext: true,
+  weatherPlace: '',
+  weatherUnits: 'metric',
+  weatherDays: 7,
+  weatherShowHourly: true,
+  weatherShowDetails: true,
+  agendaDaysAhead: 14,
+  agendaShowWeek: true,
+  agendaReminders: true,
+  agendaDefaultRemind: '10',
+  agendaMonthFirst: false,
+  alarmsDefaultTab: 'timers',
+  alarmsRings: 6,
+  alarmsVolume: 60,
+  alarms24h: true,
+  perfDefaultTab: 'cpu',
+  perfShowCores: true,
+  perfFillGraph: true,
+  perfShowGrid: true,
+  usageIdleMinutes: 5,
+  usageShowWeek: true,
+  usageMax: 8,
+  usageIgnore: '',
+  appsView: 'list',
+  appsShowFavourites: true,
+  appsShowRecent: true,
+  appsShowAll: true,
+  appsTileSize: 48,
+  boardColumnWidth: 200,
+  boardShowDue: true,
+  boardShowNotes: true,
+  boardCompact: false,
+  habitsDays: 7,
+  habitsShowStreak: true,
+  habitsShowHeatmap: true,
+  calcShowKeypad: true,
+  calcAngle: 'deg',
+  calcPrecision: 10,
+  calcGrouping: true,
+  trayIconSize: 24,
+  trayShowLabels: false,
+  trayShowHidden: true,
+  linksEngine: 'google',
+  linksShowSearch: true,
+  linksShowLabels: true,
+  linksTileSize: 44,
+  browserReader: false,
+  browserShowNav: true,
+  browserZoom: 100,
 };
 
 /**
@@ -384,6 +713,12 @@ interface RawSettings {
 type QueuedWrite =
   | { op: 'set'; key: ConfigKey; value: unknown; scope: Exclude<SettingScope, 'auto'> }
   | { op: 'clear'; key: ConfigKey };
+
+function sameKeys(a: ReadonlySet<ConfigKey>, b: ReadonlySet<ConfigKey>): boolean {
+  if (a.size !== b.size) return false;
+  for (const key of a) if (!b.has(key)) return false;
+  return true;
+}
 
 /** Only real config keys; `$instances`, `$shortcuts` and unknowns are not ours. */
 function isConfigKey(key: string): key is ConfigKey {
@@ -428,8 +763,12 @@ class ConfigStore {
   set<K extends ConfigKey>(key: K, value: DesktopConfig[K], scope: SettingScope = 'auto'): void {
     const target = scope === 'auto' ? (this.isOverridden(key) ? 'monitor' : 'all') : scope;
     this.#pending.set(key, value);
-    this.current = { ...this.current, [key]: value };
-    if (target === 'monitor') this.overrides = new Set(this.overrides).add(key);
+    // In place, so only what reads this one key updates. Replacing the object
+    // re-ran every module on the surface for every tick of a dragged slider.
+    this.current[key] = value;
+    if (target === 'monitor' && !this.overrides.has(key)) {
+      this.overrides = new Set(this.overrides).add(key);
+    }
     this.#queue.set(key, { op: 'set', key, value, scope: target });
     this.#schedule();
   }
@@ -579,10 +918,28 @@ class ConfigStore {
       this.#hostConfig = { ...DEFAULT_CONFIG, ...(merged as Partial<DesktopConfig>) };
       // Keep un-written edits on top, so a settings change from elsewhere
       // cannot make a slider jump back mid-drag.
-      this.current = { ...this.#hostConfig, ...Object.fromEntries(this.#pending) };
-      this.overrides = this.#readOverrides(settings.inner as unknown as RawSettings);
+      this.#assign({ ...this.#hostConfig, ...Object.fromEntries(this.#pending) } as DesktopConfig);
+      const overrides = this.#readOverrides(settings.inner as unknown as RawSettings);
+      if (!sameKeys(overrides, this.overrides)) this.overrides = overrides;
     } catch (err) {
       console.error('[config] could not read widget settings; keeping current values', err);
+    }
+  }
+
+  /**
+   * Writes only the keys whose value actually changed.
+   *
+   * The host broadcasts `settings-changed` for *any* write to the settings
+   * file - this widget's own, the shell-style sync, the glass tint, the other
+   * display's - and this used to answer each one with a brand-new config
+   * object. Every module on both displays then re-rendered after every write,
+   * including the writes its own slider had just caused. Assigning per key
+   * leaves a change nobody reads costing nothing at all.
+   */
+  #assign(next: DesktopConfig): void {
+    const target = this.current as unknown as Record<string, unknown>;
+    for (const [key, value] of Object.entries(next)) {
+      if (!Object.is(target[key], value)) target[key] = value;
     }
   }
 

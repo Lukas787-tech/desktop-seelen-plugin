@@ -232,7 +232,7 @@
 
 <style>
   .lede {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1.45;
     color: var(--panel-fg-muted);
     margin-bottom: 12px;
@@ -266,8 +266,8 @@
 
   .tabs button {
     padding: 5px 10px;
-    font-size: 12px;
-    border-radius: 7px;
+    font-size: calc(12px * var(--text-scale, 1));
+    border-radius: calc(7px * var(--round, 1));
     background: color-mix(in oklab, var(--color-gray-300, #666) 18%, transparent);
     color: var(--panel-fg);
     cursor: pointer;
@@ -282,8 +282,8 @@
     width: 100%;
     padding: 7px 10px;
     font: inherit;
-    font-size: 12px;
-    border-radius: 8px;
+    font-size: calc(12px * var(--text-scale, 1));
+    border-radius: calc(8px * var(--round, 1));
     color: var(--panel-fg);
     background: color-mix(in oklab, var(--color-gray-100, #333) 50%, transparent);
   }
@@ -308,10 +308,10 @@
     gap: 8px;
     width: 100%;
     padding: 6px 8px;
-    border-radius: 8px;
+    border-radius: calc(8px * var(--round, 1));
     background: transparent;
     color: var(--panel-fg);
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     text-align: left;
     cursor: pointer;
   }
@@ -335,7 +335,7 @@
   .dot {
     width: 20px;
     height: 20px;
-    border-radius: 5px;
+    border-radius: calc(5px * var(--round, 1));
     flex: none;
     background: color-mix(in oklab, var(--color-gray-300, #666) 40%, transparent);
   }
@@ -348,7 +348,7 @@
 
   .tag {
     flex: none;
-    font-size: 9px;
+    font-size: calc(9px * var(--text-scale, 1));
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--panel-fg-muted);
@@ -357,7 +357,7 @@
   .empty,
   .error {
     color: var(--panel-fg-muted);
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
   }
 
   .error {
@@ -381,7 +381,7 @@
     align-items: center;
     gap: 8px;
     padding: 5px 6px;
-    border-radius: 8px;
+    border-radius: calc(8px * var(--round, 1));
   }
 
   .found li:hover {
@@ -398,7 +398,7 @@
 
   /* The end of a path says more than its start, so it is what survives. */
   .why {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -414,16 +414,16 @@
   }
 
   .hint {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1.5;
     color: var(--panel-fg-muted);
   }
 
   code {
-    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
-    font-size: 10px;
+    font-family: var(--mono-font, ui-monospace, 'Cascadia Mono', Consolas, monospace);
+    font-size: calc(10px * var(--text-scale, 1));
     padding: 1px 4px;
-    border-radius: 4px;
+    border-radius: calc(4px * var(--round, 1));
     background: color-mix(in oklab, var(--color-gray-300, #666) 24%, transparent);
   }
 
@@ -431,15 +431,15 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
   .primary {
     align-self: flex-start;
     padding: 7px 14px;
-    border-radius: 8px;
-    font-size: 12px;
+    border-radius: calc(8px * var(--round, 1));
+    font-size: calc(12px * var(--text-scale, 1));
     cursor: pointer;
     color: #fff;
     background: color-mix(in oklab, var(--color-blue-600, #37f) 90%, transparent);

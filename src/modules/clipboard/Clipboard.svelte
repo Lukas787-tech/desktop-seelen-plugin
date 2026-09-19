@@ -104,7 +104,7 @@
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     text-align: left;
     cursor: pointer;
   }
@@ -118,7 +118,7 @@
     width: 28px;
     height: 20px;
     object-fit: cover;
-    border-radius: 3px;
+    border-radius: calc(3px * var(--round, 1));
   }
 
   .clear {
@@ -129,7 +129,7 @@
     background: transparent;
     color: var(--panel-fg-muted);
     font: inherit;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     cursor: pointer;
   }
 

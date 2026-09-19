@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { config } from '$lib/config.svelte';
+  import Ticker from '../Ticker.svelte';
 
   const cfg = $derived(config.current);
 
@@ -19,10 +21,22 @@
 
   const total = $derived((phase === 'work' ? cfg.timerWorkMinutes : cfg.timerBreakMinutes) * 60);
 
-  // A paused timer follows the setting, so changing the length in the dialog
-  // shows up straight away instead of at the next reset.
+  /*
+   * A timer that is sitting at its full length follows the setting, so changing
+   * the length in the dialog shows up straight away.
+   *
+   * Only `total` is tracked. This used to read `running` as well, so pausing -
+   * which turns `running` off - re-ran it and put the full length back: Pause
+   * was a Reset with a different label. A run paused part-way now keeps its
+   * time.
+   */
+  let lastTotal = untrack(() => total);
   $effect(() => {
-    if (!running) left = total;
+    const next = total;
+    untrack(() => {
+      if (!running && left === lastTotal) left = next;
+      lastTotal = next;
+    });
   });
 
   // Counts down against a wall-clock deadline rather than by subtracting a
@@ -107,7 +121,8 @@
 <div class="m-body" data-no-drag>
   <div class="head">
     <span class="m-pill" class:m-on={running}>{phase === 'work' ? 'Focus' : 'Break'}</span>
-    <span class="clock">{clock}</span>
+    <!-- Counting down, so each new digit drops in from above. -->
+    <span class="clock"><Ticker value={clock} direction={-1} /></span>
   </div>
 
   <div class="m-bar"><span style:width="{progress}%"></span></div>
@@ -135,7 +150,7 @@
   .clock {
     font-family: var(--display-font);
     font-size: calc(var(--ui-size) * 2.43);
-    font-weight: 200;
+    font-weight: var(--display-weight, 200);
     line-height: 1;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;

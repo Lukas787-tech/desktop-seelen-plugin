@@ -21,6 +21,8 @@
 
   const cfg = $derived(config.current);
 
+  $effect(() => media.acquire());
+
   let tab = $state<'now' | 'mixer'>('now');
   let canvas = $state<HTMLCanvasElement | null>(null);
 
@@ -94,44 +96,88 @@
     const ctx = el.getContext('2d');
     if (!ctx) return;
 
+    /*
+     * The backing store is sized when the element's size changes, not per
+     * event. The old draw assigned `width` and `height` from `clientWidth` on
+     * every waveform message: the read forced a layout and the write threw the
+     * bitmap away and allocated a new one, several times a second, for as long
+     * as anything played. It also ignored the display's scale, so the bars
+     * were drawn at 1x and stretched on a 150% screen.
+     */
+    let width = 0;
+    let height = 0;
+    let colour = '#7aa2f7';
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      width = el.clientWidth;
+      height = el.clientHeight;
+      el.width = Math.max(1, Math.round(width * dpr));
+      el.height = Math.max(1, Math.round(height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // The resolved `--accent`, so the bars follow the theme like the rest.
+      colour = getComputedStyle(el).color || colour;
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(el);
+    resize();
+
+    /*
+     * Drawn once per frame from the newest message. Messages can arrive faster
+     * than the display refreshes, and every frame drawn in between was thrown
+     * away unseen.
+     */
+    let latest: number[] | null = null;
+    let frame = 0;
+    const draw = () => {
+      frame = 0;
+      const bins = latest;
+      if (!bins || width <= 0 || height <= 0) return;
+      ctx.clearRect(0, 0, width, height);
+
+      const bars = Math.min(56, bins.length);
+      const step = Math.floor(bins.length / bars);
+      const gap = 2;
+      const barWidth = Math.max(1, width / bars - gap);
+
+      ctx.fillStyle = colour;
+      ctx.beginPath();
+      for (let i = 0; i < bars; i++) {
+        const db = bins[i * step] ?? -120;
+        // dBFS in [-120, 0] mapped to [0, 1], with the quiet tail trimmed.
+        const level = Math.max(0, Math.min(1, (db + 70) / 70));
+        const barHeight = Math.max(1, level * height);
+        ctx.roundRect(i * (barWidth + gap), height - barHeight, barWidth, barHeight, barWidth / 2);
+      }
+      ctx.globalAlpha = 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    };
+
     disposables.add(
       subscribeWaveform((wave: AudioWaveform) => {
         const bins = wave.frequencies;
         if (!bins.length) return;
 
         // Every bin at the noise floor means no audio reaches this device.
-        if (Math.max(...bins) <= -119) {
-          hasSignal = false;
+        // A loop rather than `Math.max(...bins)`, which spread 128 arguments
+        // onto the stack for every message.
+        let loudest = -Infinity;
+        for (const bin of bins) if (bin > loudest) loudest = bin;
+        if (loudest <= -119) {
+          if (hasSignal) hasSignal = false;
           return;
         }
-        hasSignal = true;
+        if (!hasSignal) hasSignal = true;
 
-        const width = (el.width = el.clientWidth);
-        const height = (el.height = el.clientHeight);
-        ctx.clearRect(0, 0, width, height);
-
-        const bars = Math.min(56, bins.length);
-        const step = Math.floor(bins.length / bars);
-        const gap = 2;
-        const barWidth = Math.max(1, width / bars - gap);
-
-        ctx.fillStyle = cfg.accentColor;
-        for (let i = 0; i < bars; i++) {
-          const db = bins[i * step] ?? -120;
-          // dBFS in [-120, 0] mapped to [0, 1], with the quiet tail trimmed.
-          const level = Math.max(0, Math.min(1, (db + 70) / 70));
-          const barHeight = Math.max(1, level * height);
-          ctx.globalAlpha = 0.45 + level * 0.55;
-          ctx.beginPath();
-          ctx.roundRect(i * (barWidth + gap), height - barHeight, barWidth, barHeight, barWidth / 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
+        latest = bins;
+        if (!frame) frame = requestAnimationFrame(draw);
       }),
     );
 
     return () => {
       disposables.dispose();
+      observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
       hasSignal = false;
     };
   });
@@ -360,9 +406,9 @@
     justify-content: center;
     gap: 5px;
     padding: 5px 6px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     font-weight: 500;
-    border-radius: 7px;
+    border-radius: calc(7px * var(--round, 1));
     background: transparent;
     color: var(--panel-fg-muted);
     cursor: pointer;
@@ -379,9 +425,9 @@
   }
 
   .count {
-    font-size: 9px;
+    font-size: calc(9px * var(--text-scale, 1));
     padding: 0 5px;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     background: color-mix(in oklab, var(--color-gray-500, #888) 34%, transparent);
   }
 
@@ -426,7 +472,7 @@
     display: block;
     width: 100%;
     height: 100%;
-    border-radius: 12px;
+    border-radius: calc(12px * var(--round, 1));
     object-fit: contain;
     box-shadow: 0 6px 20px rgb(0 0 0 / 0.45);
   }
@@ -434,7 +480,7 @@
   .art-placeholder {
     display: grid;
     place-items: center;
-    font-size: 28px;
+    font-size: calc(28px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     background: color-mix(in oklab, var(--color-gray-300, #666) 24%, transparent);
   }
@@ -445,7 +491,7 @@
     bottom: -3px;
     width: 9px;
     height: 9px;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-gray-50, #16161e) 80%, transparent);
     animation: pulse 2s ease-in-out infinite;
   }
@@ -480,13 +526,13 @@
   }
 
   .title {
-    font-size: 14px;
+    font-size: calc(14px * var(--text-scale, 1));
     font-weight: 600;
     letter-spacing: -0.01em;
   }
 
   .author {
-    font-size: 11.5px;
+    font-size: calc(11.5px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
@@ -494,8 +540,10 @@
     opacity: 0.7;
   }
 
-  /* Collapsed until the host actually delivers signal. */
+  /* Collapsed until the host actually delivers signal. `color` is only read
+     back by the draw, to paint the bars in the resolved accent. */
   .viz {
+    color: var(--accent, #7aa2f7);
     width: 100%;
     height: 0;
     flex: none;
@@ -517,21 +565,21 @@
 
   .progress {
     height: 4px;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     overflow: hidden;
     background: color-mix(in oklab, var(--color-gray-300, #666) 32%, transparent);
   }
 
   .bar {
     height: 100%;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     transition: width 480ms linear;
   }
 
   .times {
     display: flex;
     justify-content: space-between;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     font-variant-numeric: tabular-nums;
   }
@@ -550,16 +598,26 @@
     background: transparent;
     color: var(--panel-fg);
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     width: 28px;
     height: 28px;
     opacity: 0.85;
-    transition: opacity 120ms ease, transform 120ms ease;
+    transition:
+      opacity var(--dur-fast) var(--ease),
+      background-color var(--dur-fast) var(--ease),
+      scale var(--dur-slow) var(--ease-spring);
   }
 
   .transport button:hover {
     opacity: 1;
-    transform: scale(1.08);
+    scale: 1.14;
+    background: color-mix(in oklab, var(--color-gray-300, #666) 22%, transparent);
+  }
+
+  /* Pressed in, then sprung back: play and skip should feel like buttons. */
+  .transport button:active {
+    scale: 0.84;
+    transition-duration: var(--dur-fast);
   }
 
   .transport svg {
@@ -614,9 +672,9 @@
     display: grid;
     place-items: center;
     background: color-mix(in oklab, var(--color-gray-300, #666) 20%, transparent);
-    border-radius: 7px;
+    border-radius: calc(7px * var(--round, 1));
     cursor: pointer;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     transition: opacity 120ms ease;
   }
 
@@ -627,7 +685,7 @@
   }
 
   .face .initial {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     font-weight: 600;
     color: var(--panel-fg-muted);
   }
@@ -644,7 +702,7 @@
   }
 
   .name {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
@@ -657,7 +715,7 @@
     width: 100%;
     height: 4px;
     appearance: none;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     cursor: pointer;
     background: color-mix(in oklab, var(--color-gray-300, #666) 32%, transparent);
   }
@@ -666,7 +724,7 @@
     appearance: none;
     width: 11px;
     height: 11px;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     background: var(--accent, #7aa2f7);
     box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
     transition: transform 120ms ease;
@@ -677,7 +735,7 @@
   }
 
   .pct {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     text-align: right;
     color: var(--panel-fg-muted);
     font-variant-numeric: tabular-nums;
@@ -688,7 +746,7 @@
     flex-direction: column;
     gap: 4px;
     margin-top: 2px;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     text-transform: uppercase;
     letter-spacing: 0.07em;
     color: var(--panel-fg-muted);
@@ -697,9 +755,9 @@
   .device select {
     background: color-mix(in oklab, var(--color-gray-100, #333) 60%, transparent);
     color: var(--panel-fg);
-    border-radius: 7px;
+    border-radius: calc(7px * var(--round, 1));
     padding: 5px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     text-transform: none;
     letter-spacing: 0;
     cursor: pointer;
@@ -707,12 +765,12 @@
 
   .empty {
     color: var(--panel-fg-muted);
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     margin: auto;
   }
 
   .empty.small {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     margin: 8px auto;
   }
 </style>

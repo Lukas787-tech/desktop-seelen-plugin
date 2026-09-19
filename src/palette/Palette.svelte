@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { SeelenSettingsWidgetId } from '@seelen-ui/lib';
-  import { Alignment } from '@seelen-ui/lib/types';
+  import { Alignment, type WidgetId } from '@seelen-ui/lib/types';
   import { ConnectedMonitorList, Disposables, SeelenCommand, Widget, invoke } from '$lib/seelen';
   import { displayName, games, launcherOf } from '$lib/games.svelte';
   import { apps, launch } from '$lib/launch.svelte';
   import { icons } from '$lib/icons.svelte';
   import { media } from '$lib/media.svelte';
+  import { motionEnabled } from '$lib/motion';
   import { showDesktop } from '$lib/windows.svelte';
 
   interface Entry {
@@ -20,9 +21,14 @@
 
   const disposables = new Disposables();
 
+  /** The desktop surface, which the game-mode summon is addressed to. */
+  const DESKTOP_WIDGET_ID = '@ralfm/desktop' as unknown as WidgetId;
+
   let query = $state('');
   let active = $state(0);
   let input = $state<HTMLInputElement | null>(null);
+  let shell = $state<HTMLElement | null>(null);
+  let list = $state<HTMLUListElement | null>(null);
 
   const widget = Widget.self;
 
@@ -84,7 +90,7 @@
       id: 'action-startmenu',
       label: 'Start menu',
       hint: "Open Windows' own",
-      glyph: '\u229E',
+      glyph: '⊞',
       run: () => void invoke(SeelenCommand.ShowStartMenu).catch(() => {}),
     },
     {
@@ -93,6 +99,26 @@
       hint: 'Desktop',
       glyph: '\u{1F5BC}',
       run: () => void invoke(SeelenCommand.WallpaperNext).catch(() => {}),
+    },
+    {
+      /*
+       * The way into game mode from anywhere.
+       *
+       * The palette is a Popup widget and so actually holds the keyboard, which
+       * the desktop surface does not - so this is the one place a summon can
+       * come from while another window is in front. The trigger reaches every
+       * desktop replica and only the one that owns the launcher acts on it; see
+       * `ownsGameMode`.
+       */
+      id: 'action-gamemode',
+      label: 'Game mode',
+      hint: 'Console launcher',
+      glyph: '\u{1F3AE}',
+      run: () =>
+        void invoke(SeelenCommand.TriggerWidget, {
+          // The host brands widget ids; this is the surface's own, by name.
+          payload: { id: DESKTOP_WIDGET_ID, customArgs: { action: 'game-mode' } },
+        }).catch(() => {}),
     },
     {
       id: 'action-settings',
@@ -187,6 +213,43 @@
     active = 0;
   });
 
+  /*
+   * The highlight is one element that slides between rows rather than a
+   * background each row switches on, which is what makes arrowing down the
+   * list - or running the pointer over it - read as one continuous movement.
+   * Measured after each render; `offsetTop` ignores the rows' own entrance
+   * transforms, so it is where the row will come to rest.
+   */
+  let marker = $state<{ top: number; height: number } | null>(null);
+
+  $effect(() => {
+    void results;
+    const index = active;
+    const node = list;
+    if (!node) {
+      marker = null;
+      return;
+    }
+    const row = node.querySelectorAll<HTMLElement>('button[role="option"]')[index];
+    marker = row ? { top: row.offsetTop, height: row.offsetHeight } : null;
+  });
+
+  /**
+   * Comes into focus each time it is summoned. The host shows the same window
+   * again rather than a new one, so nothing is inserted for a CSS entrance to
+   * play on - the animation is started here instead.
+   */
+  function arrive() {
+    if (!shell || !motionEnabled()) return;
+    shell.animate(
+      [
+        { opacity: 0, transform: 'translateY(-12px) scale(0.965)', filter: 'blur(6px)' },
+        { opacity: 1, transform: 'none', filter: 'blur(0)' },
+      ],
+      { duration: 460, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+    );
+  }
+
   function choose(entry: Entry | undefined) {
     if (!entry) return;
     entry.run();
@@ -244,7 +307,7 @@
 
   onMount(() => {
     void (async () => {
-      const subs = await Promise.all([apps.acquire(), icons.start(), media.start()]);
+      const subs = await Promise.all([apps.acquire(), icons.start(), media.acquire()]);
       for (const sub of subs.flat()) disposables.addFn(sub);
       // Read once, watch nothing: see `readOnly`.
       await games.readOnly();
@@ -252,23 +315,28 @@
 
     // Each time the palette is summoned it should start empty, centred and
     // focused. The Popup preset places it at the cursor, which is right for a
-    // context popup but wrong for a launcher, so we recentre afterwards.
+    // context popup but wrong for a launcher, so we recentre afterwards - and
+    // only then animate in, so it arrives where it will stay.
     widget.onTrigger((payload) => {
       query = '';
       active = 0;
       void tick().then(async () => {
         await centreOnActiveDisplay(payload.desiredPosition ?? null);
+        arrive();
         input?.focus();
       });
     });
 
-    void tick().then(() => input?.focus());
+    void tick().then(() => {
+      arrive();
+      input?.focus();
+    });
 
     return () => disposables.dispose();
   });
 </script>
 
-<div class="palette">
+<div class="palette" bind:this={shell}>
   <input
     bind:this={input}
     bind:value={query}
@@ -280,7 +348,15 @@
   />
 
   {#if results.length}
-    <ul role="listbox" aria-label="Results">
+    <ul role="listbox" aria-label="Results" bind:this={list}>
+      {#if marker}
+        <li
+          class="marker"
+          aria-hidden="true"
+          style:transform="translateY({marker.top}px)"
+          style:height="{marker.height}px"
+        ></li>
+      {/if}
       {#each results as entry, i (`${entry.id}#${i}`)}
         <li>
           <button
@@ -314,7 +390,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    border-radius: 16px;
+    border-radius: calc(16px * var(--round, 1));
     background: color-mix(in oklab, var(--color-gray-50, #16161e) 82%, transparent);
     border: 1px solid color-mix(in oklab, var(--color-gray-300, #666) 32%, transparent);
     backdrop-filter: blur(24px);
@@ -325,19 +401,57 @@
     width: 100%;
     padding: 10px 12px;
     font: inherit;
-    font-size: 15px;
-    border-radius: 10px;
+    font-size: calc(15px * var(--text-scale, 1));
+    border-radius: calc(10px * var(--round, 1));
     color: var(--panel-fg);
     background: color-mix(in oklab, var(--color-gray-100, #333) 45%, transparent);
+    outline: none;
+    transition:
+      background-color var(--dur) var(--ease),
+      box-shadow var(--dur-slow) var(--ease);
+  }
+
+  /* The field glows in the accent while it is being typed into. */
+  input:focus {
+    background: color-mix(in oklab, var(--color-gray-100, #333) 60%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--accent, var(--rs-accent, #7aa2f7)) 50%, transparent),
+      0 0 0 5px color-mix(in oklab, var(--accent, var(--rs-accent, #7aa2f7)) 14%, transparent);
   }
 
   ul {
+    position: relative;
     list-style: none;
     display: flex;
     flex-direction: column;
     gap: 1px;
     max-height: 420px;
     overflow-y: auto;
+  }
+
+  .marker {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    border-radius: calc(9px * var(--round, 1));
+    background: color-mix(in oklab, var(--color-gray-300, #666) 34%, transparent);
+    pointer-events: none;
+    transition:
+      transform var(--dur) var(--ease-move),
+      height var(--dur) var(--ease-move);
+  }
+
+  /* Positioned so each row paints above the marker that slides beneath it. */
+  li:not(.marker) {
+    position: relative;
+    animation: fx-rise var(--dur-slow) var(--ease) backwards;
+  }
+
+  @supports (order: sibling-index()) {
+    li:not(.marker) {
+      animation-delay: calc(max(0, min(sibling-index() - 2, 12)) * var(--step) * 0.5);
+    }
   }
 
   button {
@@ -347,17 +461,29 @@
     gap: 10px;
     width: 100%;
     padding: 7px 10px;
-    border-radius: 9px;
+    border-radius: calc(9px * var(--round, 1));
     background: transparent;
     color: var(--panel-fg);
     font: inherit;
-    font-size: 13px;
+    font-size: calc(13px * var(--text-scale, 1));
     text-align: left;
     cursor: pointer;
+    transition: scale var(--dur) var(--ease-spring);
   }
 
-  button.active {
-    background: color-mix(in oklab, var(--color-gray-300, #666) 34%, transparent);
+  button:active {
+    scale: 0.985;
+    transition-duration: var(--dur-fast);
+  }
+
+  img,
+  .glyph {
+    transition: scale var(--dur) var(--ease-spring);
+  }
+
+  button.active img,
+  button.active .glyph {
+    scale: 1.15;
   }
 
   img {
@@ -378,7 +504,12 @@
   }
 
   .hint {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
+    transition: color var(--dur) var(--ease);
+  }
+
+  button.active .hint {
+    color: var(--panel-fg);
   }
 </style>

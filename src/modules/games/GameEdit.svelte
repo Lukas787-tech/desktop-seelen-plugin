@@ -178,13 +178,13 @@
   }
 
   .value {
-    font-size: 15px;
+    font-size: calc(15px * var(--text-scale, 1));
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
   .key {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     text-transform: uppercase;
     letter-spacing: 0.07em;
     color: var(--panel-fg-muted);
@@ -201,7 +201,7 @@
   .label {
     flex: none;
     width: 110px;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
   }
 
   input:not([type='checkbox']),
@@ -210,9 +210,9 @@
     min-width: 0;
     padding: 6px 9px;
     font: inherit;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     border: 0;
-    border-radius: 7px;
+    border-radius: calc(7px * var(--round, 1));
     color: var(--panel-fg);
     background: color-mix(in oklab, var(--color-gray-100, #333) 50%, transparent);
   }
@@ -226,7 +226,7 @@
   }
 
   .note {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1.45;
     color: var(--panel-fg-muted);
     padding: 4px 0;
@@ -236,8 +236,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
-    font-size: 10px;
+    font-family: var(--mono-font, ui-monospace, 'Cascadia Mono', Consolas, monospace);
+    font-size: calc(10px * var(--text-scale, 1));
   }
 
   footer {
@@ -261,7 +261,7 @@
     appearance: none;
     width: 32px;
     height: 18px;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     position: relative;
     cursor: pointer;
     margin-left: auto;

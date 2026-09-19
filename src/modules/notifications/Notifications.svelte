@@ -124,7 +124,7 @@
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     text-align: left;
     cursor: pointer;
   }
@@ -139,7 +139,7 @@
 
   /* The body is the only part worth wrapping; two lines, then an ellipsis. */
   .body {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -156,7 +156,7 @@
     background: transparent;
     color: var(--panel-fg-muted);
     font: inherit;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     cursor: pointer;
   }
 

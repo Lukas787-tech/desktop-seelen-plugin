@@ -7,6 +7,14 @@
   /** The action waiting for a second click, when confirmation is on. */
   let pending = $state<SessionActionId | null>(null);
 
+  // Left armed, the confirmation would still be waiting the next time anyone
+  // looked at the desktop, one click from shutting the machine down.
+  $effect(() => {
+    if (!pending) return;
+    const timer = setTimeout(() => (pending = null), 8000);
+    return () => clearTimeout(timer);
+  });
+
   const shown = $derived(
     SESSION_ACTIONS.filter((action) => {
       if (action.id === 'sleep') return cfg.powerShowSleep;
@@ -78,6 +86,6 @@
   }
 
   .confirm p {
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
   }
 </style>

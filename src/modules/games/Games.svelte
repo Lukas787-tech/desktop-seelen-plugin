@@ -212,6 +212,16 @@
       </button>
     {/if}
 
+    {#if games.duplicateCount}
+      <button
+        class="chip dupes"
+        title="The same game was found more than once - by a shortcut and by the process it started, say. This folds them into one entry, keeping whichever one you have renamed, given a cover or starred."
+        onclick={() => games.mergeDuplicates()}
+      >
+        {games.duplicateCount} duplicate{games.duplicateCount === 1 ? '' : 's'}
+      </button>
+    {/if}
+
     {#if hiddenCount}
       <button
         class="chip"
@@ -386,8 +396,8 @@
     display: grid;
     place-items: center;
     border: 0;
-    border-radius: 6px;
-    font-size: 13px;
+    border-radius: calc(6px * var(--round, 1));
+    font-size: calc(13px * var(--text-scale, 1));
     line-height: 1;
     cursor: pointer;
     color: var(--panel-fg-muted);
@@ -407,9 +417,9 @@
     flex: none;
     padding: 2px 7px;
     border: 0;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     font: inherit;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     cursor: pointer;
     color: var(--panel-fg-muted);
     background: color-mix(in oklab, var(--color-gray-300, #666) 24%, transparent);
@@ -420,9 +430,16 @@
     background: color-mix(in oklab, var(--accent, #7aa2f7) 30%, transparent);
   }
 
+  /* Amber rather than the accent: this one is pointing out a mess, not
+     offering something new. It goes when there is nothing left to merge. */
+  .chip.dupes {
+    color: var(--color-yellow-400, #facc15);
+    background: color-mix(in oklab, var(--color-yellow-400, #facc15) 20%, transparent);
+  }
+
   .scanning {
     flex: none;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
@@ -443,7 +460,7 @@
 
   .group {
     padding: 6px 0 4px;
-    font-size: 9px;
+    font-size: calc(9px * var(--text-scale, 1));
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -499,14 +516,22 @@
 
   .tile.zoom .hit {
     transition:
-      transform 0.14s ease,
-      box-shadow 0.14s ease;
+      translate var(--dur-slow) var(--ease-spring),
+      scale var(--dur-slow) var(--ease-spring),
+      box-shadow var(--dur) var(--ease);
   }
 
+  /* Cover art lifts off the shelf on a spring, and dips under a press. */
   .tile.zoom .hit:hover,
   .tile.zoom .hit:focus-visible {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
+    translate: 0 -3px;
+    scale: 1.045;
+    box-shadow: 0 12px 26px rgb(0 0 0 / 0.42);
+  }
+
+  .tile.zoom .hit:active {
+    scale: 0.97;
+    transition-duration: var(--dur-fast);
   }
 
   .hit:focus-visible {
@@ -527,8 +552,8 @@
   .badge {
     max-width: 100%;
     padding: 1px 5px;
-    border-radius: 999px;
-    font-size: 9px;
+    border-radius: calc(999px * var(--round, 1));
+    font-size: calc(9px * var(--text-scale, 1));
     font-weight: 600;
     letter-spacing: 0.02em;
     white-space: nowrap;
@@ -545,7 +570,7 @@
 
   .tile-star {
     margin-left: auto;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1;
     text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
   }
@@ -586,7 +611,7 @@
   }
 
   .caption-name {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     font-weight: 600;
     line-height: 1.2;
     color: #fff;
@@ -596,12 +621,12 @@
   }
 
   .caption-sub {
-    font-size: 9px;
+    font-size: calc(9px * var(--text-scale, 1));
     color: rgb(255 255 255 / 0.72);
   }
 
   .name {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -609,7 +634,7 @@
   }
 
   .sub {
-    font-size: 9px;
+    font-size: calc(9px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -626,8 +651,8 @@
     display: grid;
     place-items: center;
     border: 0;
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: calc(6px * var(--round, 1));
+    font-size: calc(12px * var(--text-scale, 1));
     line-height: 1;
     cursor: pointer;
     color: #fff;
@@ -658,7 +683,7 @@
     align-items: center;
     gap: 8px;
     width: auto;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     border-radius: 0;
   }
 

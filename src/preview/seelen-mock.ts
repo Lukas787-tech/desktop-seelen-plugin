@@ -254,6 +254,21 @@ const gamesFile = JSON.stringify({
   games: [
     ['steam://rungameid/1091500', 'Cyberpunk 2077', 'steam', 1420, 34, 3, true],
     ['steam://rungameid/730', 'Counter-Strike 2', 'steam', 8_640, 612, 0.4, false],
+    /*
+     * The same game a second time, as the executable an earlier scan bound to
+     * it. Nothing it carries is equal to anything the shortcut above carries -
+     * which is exactly the duplicate `gamerows.ts` has to fold, and the reason
+     * the Games panel offers to merge them for good.
+     */
+    [
+      'd:\steamlibrary\steamapps\common\counter-strike global offensive\game\bin\win64\cs2.exe',
+      'Counter-Strike 2',
+      'steam',
+      9_000,
+      41,
+      1,
+      false,
+    ],
     [
       'd:\\steamlibrary\\steamapps\\common\\factorio\\bin\\x64\\factorio.exe',
       'Factorio',
@@ -555,6 +570,28 @@ const notesFile = JSON.stringify({
   ],
 });
 
+const trayIcons = [
+  ['OneDrive - Personal\nUp to date', true],
+  ['Discord', true],
+  ['Steam', true],
+  ['NVIDIA Settings', false],
+  ['Windows Security\nNo actions needed', true],
+  ['Bluetooth Devices', false],
+  ['Logitech G HUB', false],
+].map(([tooltip, visible], i) => ({
+  stable_id: { Guid: `00000000-0000-0000-0000-00000000000${i}` },
+  uid: i,
+  window_handle: 1000 + i,
+  guid: null,
+  tooltip,
+  icon_handle: null,
+  icon_path: null,
+  icon_image_hash: null,
+  callback_message: null,
+  version: 4,
+  is_visible: visible,
+}));
+
 /** What each event delivers once, shortly after something subscribes to it. */
 const EVENT_FIXTURES: Partial<Record<string, unknown>> = {
   [SeelenEvent.NetworkWlanScanned]: wlanNetworks,
@@ -587,17 +624,52 @@ const COMMAND_FIXTURES: Partial<Record<string, unknown>> = {
   [SeelenCommand.GetTrashBinInfo]: { itemCount: 23, sizeInBytes: 1.24 * GB },
   [SeelenCommand.GetMediaWaveform]: { data: Array.from({ length: 128 }, () => -120) },
   [SeelenCommand.GetStartMenuItems]: startMenuItems,
+  [SeelenCommand.GetSystemTrayIcons]: trayIcons,
+  [SeelenCommand.GetMousePosition]: [1200, 700],
+  [SeelenCommand.GetFocusedApp]: {
+    hwnd: 0x0012,
+    ownerHwnd: 0,
+    monitor: 'preview-monitor',
+    title: 'Network.svelte — desk.top — Visual Studio Code',
+    class: 'Chrome_WidgetWin_1',
+    name: 'Visual Studio Code',
+    exe: 'C:\\Program Files\\Microsoft VS Code\\Code.exe',
+    umid: null,
+    isMaximized: true,
+    isFullscreened: false,
+    rect: null,
+  },
 };
+
+/**
+ * The widget's data directory, for the length of one preview session.
+ *
+ * Seeded with the fixtures, then written to like the real one, so a module
+ * that saves and reads back - a board, a lease, a habit ticked - behaves the
+ * way it does on the host instead of forgetting every edit on the next read.
+ */
+const dataFiles = new Map<string, string>([
+  ['notes.json', notesFile],
+  ['games.json', gamesFile],
+]);
+
+/** Lets `Preview.svelte` seed a file for one of the newer modules. */
+export function seedDataFile(filename: string, content: unknown): void {
+  dataFiles.set(filename, typeof content === 'string' ? content : JSON.stringify(content));
+}
 
 export function invoke(command: string, args?: Record<string, unknown>): Promise<unknown> {
   if (command === SeelenCommand.ReadFile) {
     const filename = String(args?.filename ?? '');
-    if (filename === 'notes.json') return Promise.resolve(notesFile);
-    if (filename === 'games.json') return Promise.resolve(gamesFile);
+    const content = dataFiles.get(filename);
+    if (content !== undefined) return Promise.resolve(content);
     // Anything else falls back to its defaults, exactly as a first run would.
     return Promise.reject(new Error(`preview: no ${filename}`));
   }
-  if (command === SeelenCommand.WriteFile) return Promise.resolve(undefined);
+  if (command === SeelenCommand.WriteFile) {
+    dataFiles.set(String(args?.filename ?? ''), String(args?.content ?? ''));
+    return Promise.resolve(undefined);
+  }
 
   // The only fixture that depends on its argument: the Files module browses a
   // tree, and `Recent` is the one known folder that never has one.
@@ -636,11 +708,47 @@ export const Widget = {
   self: {
     id: '@ralfm/desktop',
     decoded: { monitorId: MONITOR_ID },
+    /*
+     * The shortcut declarations the real host loads from `metadata.yml`, which
+     * `hotkeys.ts` reads to work out which of two identical triggers fired.
+     */
+    def: {
+      shortcuts: [
+        { id: 'show-desktop', defaultKeys: ['Win', 'Shift', 'D'] },
+        { id: 'game-mode', defaultKeys: ['Win', 'Shift', 'G'] },
+      ],
+    },
+    // Game mode asks for the keyboard when it opens, because that is what makes
+    // a controller readable at all. In a preview tab there is nothing to ask.
+    focus: () => Promise.resolve(),
+    // The overlay is a lazy widget the host shows and hides; in the rig it is
+    // simply drawn, so these are the no-ops that let its buttons be pressed.
+    hide: () => {},
+    onTrigger: (_cb: (payload: unknown) => void) => {},
   },
 };
 
+/** Two displays, so the game mode dialog has a real picker to draw. */
 export const ConnectedMonitorList = {
-  getAsync: () => Promise.resolve({ all: () => [] }),
+  getAsync: () =>
+    Promise.resolve({
+      all: () => [
+        {
+          id: MONITOR_ID,
+          name: 'DELL U3423WE',
+          rect: { left: 0, top: 0, right: 3440, bottom: 1440 },
+          scaleFactor: 1,
+          isPrimary: true,
+        },
+        {
+          id: 'monitor-2',
+          name: 'LG TV',
+          rect: { left: 3440, top: 0, right: 5360, bottom: 1080 },
+          scaleFactor: 1,
+          isPrimary: false,
+        },
+      ],
+    }),
 };
 
 /** Copied rather than imported: this module *is* `seelen.ts` in this build. */

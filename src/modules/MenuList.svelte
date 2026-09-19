@@ -24,6 +24,7 @@
 
 <script lang="ts">
   import { config } from '$lib/config.svelte';
+  import { pop } from '$lib/motion';
 
   interface Props {
     items: MenuItem[];
@@ -66,8 +67,11 @@
   const cfg = $derived(config.current);
 
   let list = $state<HTMLElement | null>(null);
-  /** Viewport coordinates, once measured. Null means "not placed yet". */
-  let placed = $state<{ left: number; top: number } | null>(null);
+  /**
+   * Viewport coordinates, once measured, and the corner the menu grows out of.
+   * Null means "not placed yet".
+   */
+  let placed = $state<{ left: number; top: number; origin: string } | null>(null);
 
   /** Reserve the tick column for the whole list, so labels line up. */
   const hasChecks = $derived(items.some((item) => item.checked !== undefined));
@@ -87,6 +91,10 @@
    * descendants *and* clips them to its own overflow - so a submenu nested
    * inside a scrollable parent menu was cut off, and its width pushed a
    * horizontal scrollbar onto the parent that had to be dragged to reach it.
+   *
+   * The same decisions give the transform origin: a menu grows out of the
+   * corner that sits on the pointer, and a flyout unfolds from the side of the
+   * row it hangs off.
    */
   $effect(() => {
     const node = list;
@@ -101,12 +109,16 @@
 
     let left: number;
     let top: number;
+    let origin: string;
 
     if (root) {
       // Opened at a point: flip back over it rather than sliding along the edge,
       // which is what puts the menu beside the pointer instead of under it.
-      left = anchor.left + width > window.innerWidth - EDGE ? anchor.left - width : anchor.left;
-      top = anchor.top + height > window.innerHeight - EDGE ? anchor.top - height : anchor.top;
+      const flipX = anchor.left + width > window.innerWidth - EDGE;
+      const flipY = anchor.top + height > window.innerHeight - EDGE;
+      left = flipX ? anchor.left - width : anchor.left;
+      top = flipY ? anchor.top - height : anchor.top;
+      origin = `${flipX ? 'right' : 'left'} ${flipY ? 'bottom' : 'top'}`;
     } else {
       left = anchor.right + GAP;
       if (left + width > window.innerWidth - EDGE) {
@@ -116,11 +128,13 @@
         if (flipped >= EDGE) left = flipped;
       }
       top = anchor.top - PAD;
+      origin = `${left < anchor.left ? 'right' : 'left'} top`;
     }
 
     placed = {
       left: Math.max(EDGE, Math.min(left, maxLeft)),
       top: Math.max(EDGE, Math.min(top, maxTop)),
+      origin,
     };
   });
 
@@ -199,7 +213,11 @@
 </script>
 
 <!-- The pointer being anywhere in this level means it has not been left behind,
-     which is what lets a diagonal move into a flyout survive the row below. -->
+     which is what lets a diagonal move into a flyout survive the row below.
+
+     It leaves through a global transition: a level is removed when the whole
+     menu closes, several blocks up in the surface, and a local transition only
+     plays for the block it sits in directly. -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   class="menu panel"
@@ -209,7 +227,9 @@
   tabindex="-1"
   style:left="{placed?.left ?? 0}px"
   style:top="{placed?.top ?? 0}px"
+  style:transform-origin={placed?.origin}
   style:border-radius="{Math.min(cfg.cornerRadius, 12)}px"
+  out:pop|global={{ duration: 140, scale: 0.96 }}
   onpointerenter={onkeepopen}
   onpointermove={onkeepopen}
   {onkeydown}
@@ -289,6 +309,28 @@
     pointer-events: none;
   }
 
+  /*
+   * Once placed it grows out of its origin, and its rows follow a beat behind
+   * one another. Not before: grown while unplaced, it would bloom at the
+   * top-left corner of the display and then jump. Animations rather than
+   * transitions, so they play as the class lifts and never again while the
+   * menu stays open.
+   */
+  .menu:not(.unplaced) {
+    animation: fx-pop var(--dur-slow) var(--ease) backwards;
+  }
+
+  .menu:not(.unplaced) > * {
+    --travel: calc(var(--rs-travel, 1) * 0.55);
+    animation: fx-rise var(--dur) var(--ease) backwards;
+  }
+
+  @supports (order: sibling-index()) {
+    .menu:not(.unplaced) > * {
+      animation-delay: calc(min(sibling-index() - 1, 16) * var(--step) * 0.35);
+    }
+  }
+
   .row {
     display: flex;
     align-items: center;
@@ -296,18 +338,27 @@
     width: 100%;
     text-align: left;
     padding: 6px 10px;
-    border-radius: 7px;
+    border-radius: calc(7px * var(--round, 1));
     background: transparent;
     color: var(--panel-fg);
     font: inherit;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      color var(--dur-fast) var(--ease),
+      scale var(--dur) var(--ease-spring);
   }
 
   .row:hover:not(:disabled),
   .row:focus-visible,
   .row.open {
     background: color-mix(in oklab, var(--color-gray-300, #666) 32%, transparent);
+  }
+
+  .row:active:not(:disabled) {
+    scale: 0.98;
+    transition-duration: var(--dur-fast);
   }
 
   .row:disabled {
@@ -317,6 +368,10 @@
 
   .row.danger {
     color: var(--color-red-700, #f77);
+  }
+
+  .row.danger:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--color-red-700, #f77) 18%, transparent);
   }
 
   .label {
@@ -330,7 +385,7 @@
   .tick {
     flex: none;
     width: 11px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1;
     opacity: 0.9;
   }
@@ -338,13 +393,26 @@
   .hint,
   .chevron {
     flex: none;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
+  }
+
+  /* The chevron leans toward the flyout it opens. */
+  .chevron {
+    transition:
+      translate var(--dur) var(--ease-move),
+      color var(--dur-fast) var(--ease);
+  }
+
+  .row:hover .chevron,
+  .row.open .chevron {
+    translate: 2px 0;
+    color: var(--panel-fg);
   }
 
   .header {
     padding: 5px 10px 3px;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.09em;

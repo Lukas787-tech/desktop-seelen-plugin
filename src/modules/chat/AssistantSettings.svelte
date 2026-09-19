@@ -805,7 +805,7 @@
     gap: 2px;
     padding: 2px;
     margin-bottom: 14px;
-    border-radius: 9px;
+    border-radius: calc(9px * var(--round, 1));
     background: color-mix(in oklab, var(--color-gray-300, #666) 18%, transparent);
   }
 
@@ -814,8 +814,8 @@
   .presets button {
     flex: 1;
     padding: 5px 8px;
-    font-size: 11px;
-    border-radius: 7px;
+    font-size: calc(11px * var(--text-scale, 1));
+    border-radius: calc(7px * var(--round, 1));
     color: var(--panel-fg-muted);
     cursor: pointer;
   }
@@ -832,7 +832,7 @@
     display: flex;
     gap: 2px;
     padding: 2px;
-    border-radius: 9px;
+    border-radius: calc(9px * var(--round, 1));
     background: color-mix(in oklab, var(--color-gray-300, #666) 14%, transparent);
   }
 
@@ -850,7 +850,7 @@
     flex-wrap: wrap;
     gap: 8px;
     margin: 0 0 6px;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.09em;
@@ -874,7 +874,7 @@
   }
 
   .label {
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     display: flex;
     align-items: center;
     gap: 6px;
@@ -888,7 +888,7 @@
 
   .description,
   .note {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     text-transform: none;
     letter-spacing: 0;
@@ -918,13 +918,13 @@
   }
 
   .tool-names {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: color-mix(in oklab, var(--panel-fg-muted) 80%, transparent);
     overflow-wrap: anywhere;
   }
 
   code {
-    font-family: 'Cascadia Code', Consolas, ui-monospace, monospace;
+    font-family: var(--mono-font, 'Cascadia Code', Consolas, ui-monospace, monospace);
     font-size: 0.95em;
   }
 
@@ -933,7 +933,7 @@
     appearance: none;
     width: 34px;
     height: 19px;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     position: relative;
     cursor: pointer;
     background: color-mix(in oklab, var(--color-gray-300, #666) 35%, transparent);
@@ -965,8 +965,8 @@
   textarea {
     padding: 5px 8px;
     font: inherit;
-    font-size: 12px;
-    border-radius: 8px;
+    font-size: calc(12px * var(--text-scale, 1));
+    border-radius: calc(8px * var(--round, 1));
     color: var(--panel-fg);
     background: color-mix(in oklab, var(--color-gray-100, #333) 50%, transparent);
   }
@@ -1009,7 +1009,7 @@
 
   .value {
     width: 28px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     text-align: right;
     font-variant-numeric: tabular-nums;
     color: var(--panel-fg-muted);
@@ -1021,8 +1021,8 @@
   .primary {
     flex: none;
     padding: 5px 10px;
-    font-size: 11px;
-    border-radius: 7px;
+    font-size: calc(11px * var(--text-scale, 1));
+    border-radius: calc(7px * var(--round, 1));
     cursor: pointer;
     color: var(--panel-fg);
     background: color-mix(in oklab, var(--color-gray-300, #666) 22%, transparent);
@@ -1060,8 +1060,8 @@
     gap: 10px;
     margin: 4px 0 8px;
     padding: 8px 10px;
-    border-radius: 9px;
-    font-size: 11px;
+    border-radius: calc(9px * var(--round, 1));
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1.4;
     background: color-mix(in oklab, var(--accent, #7aa2f7) 14%, transparent);
   }
@@ -1079,8 +1079,8 @@
 
   .pill {
     padding: 1px 7px;
-    border-radius: 999px;
-    font-size: 10px;
+    border-radius: calc(999px * var(--round, 1));
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     background: color-mix(in oklab, var(--color-gray-300, #666) 24%, transparent);
   }
@@ -1103,13 +1103,13 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     margin-bottom: 4px;
   }
 
   .bar {
     height: 4px;
-    border-radius: 999px;
+    border-radius: calc(999px * var(--round, 1));
     overflow: hidden;
     background: color-mix(in oklab, var(--color-gray-300, #666) 30%, transparent);
   }

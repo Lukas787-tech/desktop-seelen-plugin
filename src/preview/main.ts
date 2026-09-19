@@ -6,6 +6,7 @@ import './tauri-stub';
 import { mount } from 'svelte';
 import Preview from './Preview.svelte';
 import '../styles/base.css';
+import '../styles/motion.css';
 import '../styles/modules.css';
 
 /**

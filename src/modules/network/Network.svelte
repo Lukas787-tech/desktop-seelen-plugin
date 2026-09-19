@@ -159,7 +159,7 @@
 
   .bars span {
     width: 3px;
-    border-radius: 1px;
+    border-radius: calc(1px * var(--round, 1));
     background: var(--panel-fg-muted);
     opacity: 0.3;
   }

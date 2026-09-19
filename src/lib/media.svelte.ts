@@ -1,4 +1,5 @@
 import { SeelenCommand, SeelenEvent, invoke, subscribe, type UnSubscriber } from './seelen';
+import { coalesced } from './live.svelte';
 import type {
   AudioWaveform,
   MediaDevice,
@@ -16,6 +17,43 @@ class MediaStore {
   players = $state<MediaPlayer[]>([]);
   outputs = $state<MediaDevice[]>([]);
   inputs = $state<MediaDevice[]>([]);
+
+  #users = 0;
+  #generation = 0;
+  #offs: UnSubscriber[] = [];
+
+  /**
+   * Starts (or joins) the live media state; call the result to release it.
+   *
+   * The surface used to `start()` this for every display at launch, whether a
+   * media panel was shown or not - and a playing track sends a sessions event
+   * each time its timeline moves, so both replicas took a stream of updates
+   * nothing on screen read for as long as music played. It now runs only while
+   * the Media panel or the palette holds it.
+   */
+  acquire(): UnSubscriber {
+    this.#users++;
+    if (this.#users === 1) {
+      const mine = ++this.#generation;
+      void this.start().then(
+        (offs) => {
+          if (mine === this.#generation) this.#offs.push(...offs);
+          else for (const off of offs) off();
+        },
+        (err) => console.error('[media] could not start', err),
+      );
+    }
+
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.#users--;
+      if (this.#users > 0) return;
+      this.#generation++;
+      for (const off of this.#offs.splice(0)) off();
+    };
+  }
 
   /** The session the transport controls act on. */
   get activePlayer(): MediaPlayer | null {
@@ -103,8 +141,8 @@ class MediaStore {
   /** Sets device volume, or one application's volume when `sessionId` is given. */
   setVolume(deviceId: string, level: number, sessionId: string | null = null): void {
     const clamped = Math.min(1, Math.max(0, level));
-    void invoke(SeelenCommand.SetVolumeLevel, { deviceId, sessionId, level: clamped }).catch((err) =>
-      console.error('[media] set volume failed', err),
+    sendVolume(`${deviceId}|${sessionId ?? ''}`, () =>
+      invoke(SeelenCommand.SetVolumeLevel, { deviceId, sessionId, level: clamped }),
     );
   }
 
@@ -121,6 +159,9 @@ class MediaStore {
     );
   }
 }
+
+/** Volume levels per device and session; see `coalesced`. */
+const sendVolume = coalesced('media');
 
 export const media = new MediaStore();
 
@@ -145,7 +186,9 @@ export function sessionLabel(session: MediaDeviceSession): string {
   if (session.isSystem) return 'System sounds';
   const name = session.name?.trim();
   if (name && name !== '???') return name;
-  const exe = session.iconPath?.split(/[\/]/).pop();
+  // Both separators: the path is a Windows one, and splitting on `/` alone
+  // labelled every such row with the whole executable path.
+  const exe = session.iconPath?.split(/[\\/]/).pop();
   if (exe) return exe.replace(/\.exe$/i, '');
   return 'Unknown application';
 }

@@ -22,7 +22,19 @@ export type PanelKind =
   | 'trash'
   | 'files'
   | 'games'
-  | 'chat';
+  | 'chat'
+  | 'weather'
+  | 'agenda'
+  | 'alarms'
+  | 'perf'
+  | 'usage'
+  | 'apps'
+  | 'board'
+  | 'habits'
+  | 'calc'
+  | 'tray'
+  | 'links'
+  | 'browser';
 
 export type IconKind = 'app' | 'file' | 'folder' | 'url';
 
@@ -86,6 +98,18 @@ export const PANEL_KINDS: readonly PanelKind[] = [
   'files',
   'games',
   'chat',
+  'weather',
+  'agenda',
+  'alarms',
+  'perf',
+  'usage',
+  'apps',
+  'board',
+  'habits',
+  'calc',
+  'tray',
+  'links',
+  'browser',
 ];
 
 /**
@@ -127,7 +151,28 @@ export const DEFAULT_PANEL_LAYOUT: Record<PanelKind, { x: number; y: number; w: 
     // everything else is worth more than one that starts the right height on
     // top of another module. Resizing is a drag; untangling an overlap is not.
     chat: { x: 360, y: 900, w: 300, h: 150 },
+
+    // The larger modules added later, in four more columns from x=1640. That
+    // is past the edge of a 1080p display and inside a 3440x1440 one; on a
+    // display too small for it, switching one on moves it into free space
+    // instead (see `findFreeSpot`), so the numbers here only have to be right
+    // for the wide case.
+    weather: { x: 1640, y: 40, w: 300, h: 360 },
+    agenda: { x: 1640, y: 420, w: 300, h: 380 },
+    alarms: { x: 1640, y: 820, w: 300, h: 330 },
+    perf: { x: 1960, y: 40, w: 320, h: 380 },
+    usage: { x: 1960, y: 440, w: 320, h: 360 },
+    tray: { x: 1960, y: 820, w: 320, h: 150 },
+    apps: { x: 2300, y: 40, w: 300, h: 460 },
+    calc: { x: 2300, y: 520, w: 300, h: 500 },
+    links: { x: 2620, y: 40, w: 300, h: 260 },
+    habits: { x: 2620, y: 320, w: 300, h: 300 },
+    board: { x: 2940, y: 40, w: 460, h: 440 },
+    // Wide and tall enough for a page, under the board.
+    browser: { x: 2940, y: 500, w: 460, h: 540 },
   };
+
+export { findFreeSpot, isOffSurface, overlaps } from './layout';
 
 /** Below this a panel cannot show its header and body at all. */
 export const MIN_PANEL_SIZE = { w: 180, h: 90 };
@@ -230,6 +275,15 @@ export class DesktopStore {
     if (!panel) return;
     panel.w = Math.max(MIN_PANEL_SIZE.w, Math.round(w));
     panel.h = Math.max(MIN_PANEL_SIZE.h, Math.round(h));
+    this.save();
+  }
+
+  /** Moves a panel without marking a drag; used when placing one in free space. */
+  placePanel(id: string, x: number, y: number): void {
+    const panel = this.state.panels.find((p) => p.id === id);
+    if (!panel) return;
+    panel.x = Math.round(x);
+    panel.y = Math.round(y);
     this.save();
   }
 

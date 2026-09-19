@@ -4,7 +4,7 @@
  *
  * The desktop surface sits behind every window, so it cannot simply be
  * screenshotted; this renders the same components, in the same panel chrome,
- * at the default 1920x1080 arrangement with every module on and mock host data
+ * at the default arrangement on a 3440x1440 stage with every module on and mock host data
  * behind them. `src/preview/seelen-mock.ts` stands in for the host.
  *
  *   node scripts/preview.mjs [outDir]
@@ -52,7 +52,7 @@ const html = `<!doctype html>
 <style>
   html, body { margin: 0; background: #07080c; }
   /* The stage is a fixed 1920x1080 surface; scale it down to fit a window. */
-  #stage { width: 1920px; height: 1080px; transform-origin: top left; }
+  #stage { width: 3440px; height: 1440px; transform-origin: top left; }
 ${css}
 </style>
 </head>
@@ -70,7 +70,7 @@ ${js}
   const y = Number(params.get('y')) || 0;
   const forced = Number(params.get('scale')) || 0;
   const fit = () => {
-    const scale = forced || Math.min(window.innerWidth / 1920, window.innerHeight / 1080, 1);
+    const scale = forced || Math.min(window.innerWidth / 3440, window.innerHeight / 1440, 1);
     // A transform - even an identity one - makes the stage the containing block
     // for every fixed-position descendant, which is what the menus use. At
     // natural size there is nothing to transform, so leave it off and let them

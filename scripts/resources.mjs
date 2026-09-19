@@ -15,6 +15,7 @@
 export const RESOURCES = [
   { name: 'desktop', kind: 'widget', dir: 'widgets/desktop', built: true },
   { name: 'palette', kind: 'widget', dir: 'widgets/palette', built: true },
+  { name: 'overlay', kind: 'widget', dir: 'widgets/overlay', built: true },
   { name: 'surface', kind: 'theme', dir: 'themes/surface', built: false },
 ];
 

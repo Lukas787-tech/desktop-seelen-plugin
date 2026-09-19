@@ -12,7 +12,8 @@ import {
   type LauncherDefinition,
   type LauncherId,
 } from './detect';
-import { noteError } from './diagnostics';
+import { noteAction, noteError } from './diagnostics';
+import { groupDuplicates } from './gamerows';
 import { newId } from './ids';
 import { apps, launch } from './launch.svelte';
 import { debouncedWriter, readJson } from './persist';
@@ -570,6 +571,64 @@ class GamesStore {
   remove(id: string): void {
     this.state.games = this.state.games.filter((game) => game.id !== id);
     this.save();
+  }
+
+  /** How many entries would go if the duplicates were folded together. */
+  get duplicateCount(): number {
+    return this.state.games.length - groupDuplicates(this.state.games).length;
+  }
+
+  /**
+   * Folds every duplicate in the library into one entry, on disk.
+   *
+   * `dedupe` already hides duplicates wherever games are drawn, but hiding is
+   * not fixing: the extra entries still collect their own play time, still turn
+   * up in the palette, and are still what the Games panel offers to edit. This
+   * is the same grouping (`gamerows.ts`, tested) applied to the stored library.
+   *
+   * The survivor of a group is the entry the *user* has touched - a rename, a
+   * cover, a favourite, a store they chose - because that is the one thing a
+   * scan cannot rebuild. Everything else is merged into it, and play time is
+   * taken as the largest rather than summed: two entries for one game are both
+   * matched by the same window, so both counted the same hours.
+   *
+   * Returns how many entries went, which is what the button that calls it says.
+   */
+  mergeDuplicates(): number {
+    const groups = groupDuplicates(this.state.games);
+    if (groups.length === this.state.games.length) return 0;
+
+    const touched = (game: GameEntry): number =>
+      (game.customName ? 8 : 0) +
+      (game.art ? 4 : 0) +
+      (game.customLauncher ? 2 : 0) +
+      (game.source === 'manual' ? 1 : 0);
+
+    const kept: GameEntry[] = [];
+    let gone = 0;
+    for (const group of groups) {
+      const keep = group.reduce((best, game) => (touched(game) > touched(best) ? game : best));
+      for (const other of group) {
+        if (other === keep) continue;
+        gone++;
+        keep.exePath ??= other.exePath;
+        keep.umid ??= other.umid;
+        keep.art ??= other.art;
+        keep.iconKey ??= other.iconKey;
+        keep.customName ??= other.customName;
+        keep.favourite ||= other.favourite;
+        keep.missing = keep.missing && other.missing;
+        keep.minutes = Math.max(keep.minutes ?? 0, other.minutes ?? 0);
+        keep.launches = Math.max(keep.launches ?? 0, other.launches ?? 0);
+        keep.lastPlayed = Math.max(keep.lastPlayed ?? 0, other.lastPlayed ?? 0) || null;
+      }
+      kept.push(keep);
+    }
+
+    this.state.games = kept;
+    this.save();
+    noteAction(`games: merged ${gone} duplicate ${gone === 1 ? 'entry' : 'entries'}`);
+    return gone;
   }
 
   toggleFavourite(id: string): void {

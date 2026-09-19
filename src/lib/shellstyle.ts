@@ -1,6 +1,7 @@
 import { Settings } from './seelen';
 import { noteError } from './diagnostics';
 import type { DesktopConfig } from './config.svelte';
+import { shellSchemeVars } from './schemes';
 import {
   ShellSyncPlanner,
   applyPlan,
@@ -125,11 +126,23 @@ export function shellVars(cfg: DesktopConfig, tint: string | null): Record<strin
     '--rs-bar-opacity': String(bar),
     '--rs-panel-opacity': String(tiers.panel),
     '--rs-overlay-opacity': String(tiers.overlay),
-    '--rs-motion': cfg.animations ? '1' : '0',
+    // The theme's speed runs 0-2 with the same meaning as the surface's
+    // Animation length - 2 takes twice as long - so the two stay in step.
+    '--rs-motion': cfg.animations ? String(Math.min(2, Math.max(0, (cfg.motionScale ?? 100) / 100))) : '0',
+    '--rs-stagger': String(Math.min(3, Math.max(0, (cfg.staggerScale ?? 100) / 100))),
     '--rs-frost': cfg.panelTexture ? '100' : '0',
     '--rs-font-family': family(cfg.fontFamily),
     '--rs-font-size': `${cfg.fontSize}px`,
     '--rs-density': DENSITY[cfg.density] ?? DENSITY.cosy,
+    /*
+     * The colour scheme. This is colour travelling *out*, which the note above
+     * says must not happen - and for the theme's own palette it still does not:
+     * with the scheme on "Follow Seelen theme" every one of these is `none` or
+     * `transparent`, and the theme's preset and accent are left alone. A named
+     * or custom scheme is different because the surface is then not reading the
+     * theme's colours at all, so there is no loop to close.
+     */
+    ...shellSchemeVars(cfg),
   };
 }
 

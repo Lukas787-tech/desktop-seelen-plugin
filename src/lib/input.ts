@@ -25,6 +25,8 @@ const TEXT_INPUT_TYPES = new Set([
 /** The field a pointer landed in, if it is one that is typed into. */
 function fieldFor(target: EventTarget | null): HTMLElement | null {
   if (!(target instanceof Element)) return null;
+  // A page in the Browser module, which is typed into as often as not.
+  if (target instanceof HTMLIFrameElement) return target;
   const field = target.closest<HTMLElement>('input, textarea, [contenteditable]');
   if (!field) return null;
   if (field instanceof HTMLTextAreaElement) return field;
@@ -68,6 +70,9 @@ export function keepTextInputUsable(): () => void {
   void subscribe(SeelenEvent.GlobalFocusChanged, ({ payload }) => {
     const app = payload as FocusedApp;
     foreground = app.hwnd === widget.windowId || app.ownerHwnd === widget.windowId ? app.hwnd : null;
+    // Let go of a framed page once the keyboard is elsewhere, so the next click
+    // into it is a focus change this document can see (see `onWindowBlur`).
+    if (foreground === null && document.activeElement instanceof HTMLIFrameElement) document.activeElement.blur();
   })
     .then((off) => disposers.push(off))
     .catch((err) => {
@@ -111,14 +116,29 @@ export function keepTextInputUsable(): () => void {
     if (field && !holdsKeyboard()) take(field);
   };
 
+  /**
+   * A click inside a framed page never reaches this document: its events stay
+   * in the frame. What does arrive is focus leaving for the frame - `blur` on
+   * the window with the iframe left as the active element, and the document
+   * still focused, which is what tells it from the user switching apps.
+   */
+  const onWindowBlur = () => {
+    setTimeout(() => {
+      const frame = document.activeElement;
+      if (frame instanceof HTMLIFrameElement && document.hasFocus() && !holdsKeyboard()) take(frame);
+    }, 0);
+  };
+
   // Capture, so a handler that stops propagation cannot cost the user their
   // keyboard - the drag actions on the panels stop plenty of pointer events.
   document.addEventListener('pointerdown', onPointerDown, { capture: true });
   document.addEventListener('focusin', onFocusIn, { capture: true });
+  window.addEventListener('blur', onWindowBlur);
 
   return () => {
     document.removeEventListener('pointerdown', onPointerDown, { capture: true });
     document.removeEventListener('focusin', onFocusIn, { capture: true });
+    window.removeEventListener('blur', onWindowBlur);
     for (const off of disposers.splice(0)) off();
   };
 }

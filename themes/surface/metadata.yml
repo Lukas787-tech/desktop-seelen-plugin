@@ -72,6 +72,180 @@ settings:
           step: null
           options: null
 
+  # The Desktop widget's colour scheme, for the shell. Written by
+  # `@ralfm/desktop` (see `shellSchemeVars` in `src/lib/schemes.ts`) whenever a
+  # scheme other than "Follow Seelen theme" is chosen there; `none` and
+  # `transparent` otherwise. Quoted string options for the reason the preset's
+  # are. Every colour is read in `shared/tokens.css` only inside a style query
+  # on `--rs-scheme`, so an unregistered or half-written set can never reach a
+  # declaration.
+  - group:
+      header: Colour scheme
+      items:
+        - name: --rs-scheme
+          label: Scheme from the Desktop widget
+          description: 'Set by the Desktop widget''s Colour scheme. None leaves colour to the preset above. Ramp recolours every grey from the ground and ink below; Full also recolours the reds, greens and blues that mark state.'
+          tip: null
+          syntax: "<string>"
+          initialValue: '"none"'
+          min: null
+          max: null
+          step: null
+          options:
+            - '"none"'
+            - '"ramp"'
+            - '"full"'
+        - name: --rs-scheme-bg
+          label: Scheme ground
+          description: The ground every panel is made of.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-bg1
+          label: Scheme raised ground
+          description: Fields, raised rows.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-bg2
+          label: Scheme selection ground
+          description: Selection, the base of every hover and hairline.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-comment
+          label: Scheme comment tone
+          description: Disabled text and the quietest marks.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-dim
+          label: Scheme secondary ink
+          description: Muted labels.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-fg
+          label: Scheme ink
+          description: Body text.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-red
+          label: Scheme red
+          description: Errors and destructive actions. Full only.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-orange
+          label: Scheme orange
+          description: Full only.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-yellow
+          label: Scheme yellow
+          description: Full only.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-green
+          label: Scheme green
+          description: Success and charging. Full only.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-cyan
+          label: Scheme cyan
+          description: Full only.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-blue
+          label: Scheme blue
+          description: Full only.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-purple
+          label: Scheme purple
+          description: Full only.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-accent
+          label: Scheme accent
+          description: Takes the preset's accent's place, so an Accent override above still wins.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+        - name: --rs-scheme-accent2
+          label: Scheme second accent
+          description: The far end of gradients.
+          tip: null
+          syntax: "<color>"
+          initialValue: transparent
+          min: null
+          max: null
+          step: null
+          options: null
+
   - group:
       header: Glass
       items:

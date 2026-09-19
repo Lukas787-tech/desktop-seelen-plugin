@@ -65,6 +65,70 @@ export function parseSearchResults(markdown: string, max = 8): SearchResult[] {
   return results;
 }
 
+/** A web search: DuckDuckGo's lite page, read through the reader. */
+export async function searchWeb(query: string, signal: AbortSignal, key = '', max = 8): Promise<SearchResult[]> {
+  const page = await reader(`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`, signal, key);
+  return parseSearchResults(page, max);
+}
+
+export interface ReadPage {
+  title: string;
+  url: string;
+  content: string;
+}
+
+/**
+ * A page as Markdown, in the reader's JSON envelope so the title needs no
+ * scraping.
+ *
+ * Narrowed to the page's `main` or `article`, with header, navigation and
+ * footer taken out: the difference between an article and a column of menu
+ * links. The reader refuses a page with neither element (422) rather than
+ * returning it whole, so that one is asked for again without the narrowing.
+ * The selector headers cost a CORS preflight, which r.jina.ai answers for any
+ * origin.
+ */
+export async function readPage(url: string, signal: AbortSignal, key = ''): Promise<ReadPage> {
+  const ask = (narrow: boolean) =>
+    fetch(`${READER}${url}`, {
+      signal,
+      headers: {
+        accept: 'application/json',
+        'x-remove-selector': 'header, nav, footer, aside',
+        ...(narrow ? { 'x-target-selector': 'main, article, [role=main]' } : {}),
+        ...(key ? { authorization: `Bearer ${key}` } : {}),
+      },
+    });
+  let response = await ask(true);
+  if (response.status === 422) response = await ask(false);
+  if (!response.ok) throw new Error(`The reader answered ${response.status} for ${url}.`);
+  const body = (await response.json()) as { data?: { title?: string; url?: string; content?: string } };
+  return { title: body.data?.title ?? '', url: body.data?.url ?? url, content: body.data?.content ?? '' };
+}
+
+export interface RenderedPage {
+  title: string;
+  /** Where the page ended up, after any redirects: what its relative links resolve against. */
+  url: string;
+  html: string;
+}
+
+/** A page as the reader's browser left it once its scripts had run: markup rather than text (see `snapshot.ts`). */
+export async function renderPage(url: string, signal: AbortSignal, key = ''): Promise<RenderedPage> {
+  const response = await fetch(`${READER}${url}`, {
+    signal,
+    headers: {
+      accept: 'application/json',
+      'x-return-format': 'html',
+      ...(key ? { authorization: `Bearer ${key}` } : {}),
+    },
+  });
+  if (!response.ok) throw new Error(`The reader answered ${response.status} for ${url}.`);
+  const body = (await response.json()) as { data?: { title?: string; url?: string; html?: string } };
+  if (!body.data?.html) throw new Error(`The reader returned no page for ${url}.`);
+  return { title: body.data.title ?? '', url: body.data.url || url, html: body.data.html };
+}
+
 /**
  * Arithmetic without `eval`: a recursive-descent parser over + - * / % ^,
  * parentheses, a handful of functions and `pi`/`e`.
@@ -204,12 +268,7 @@ export function webTools(readerKey: () => string): ToolDefinition[] {
         const query = str(args, 'query').trim();
         if (!query) return { error: 'query is required.' };
         const max = Math.min(10, Math.max(1, num(args, 'max_results') ?? 6));
-        const page = await reader(
-          `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`,
-          ctx.signal,
-          readerKey(),
-        );
-        const results = parseSearchResults(page, max);
+        const results = await searchWeb(query, ctx.signal, readerKey(), max);
         return results.length ? { query, results } : { query, results: [], note: 'No results.' };
       },
     },

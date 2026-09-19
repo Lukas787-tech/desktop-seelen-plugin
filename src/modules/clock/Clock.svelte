@@ -1,5 +1,6 @@
 <script lang="ts">
   import { config } from '$lib/config.svelte';
+  import Ticker from '../Ticker.svelte';
 
   const cfg = $derived(config.current);
 
@@ -40,9 +41,11 @@
 </script>
 
 <div class="clock">
-  <time datetime={now.toISOString()}>{time}</time>
+  <time datetime={now.toISOString()}><Ticker value={time} /></time>
   {#if cfg.clockShowDate}
-    <span class="date">{date}</span>
+    {#key date}
+      <span class="date">{date}</span>
+    {/key}
   {/if}
 </div>
 
@@ -58,14 +61,17 @@
   time {
     font-family: var(--display-font);
     font-size: calc(var(--ui-size) * 3);
-    font-weight: 200;
+    font-weight: var(--display-weight, 200);
     line-height: 1;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
   }
 
+  /* A new day rises in under the time; keyed on the date, so once a day. */
   .date {
     font-size: calc(var(--ui-size) * 0.93);
     color: var(--panel-fg-muted);
+    animation: fx-rise var(--dur-slow) var(--ease) backwards;
+    animation-delay: calc(var(--lag, 0ms) + var(--dur));
   }
 </style>

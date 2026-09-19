@@ -125,7 +125,7 @@
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     text-align: left;
     cursor: pointer;
   }

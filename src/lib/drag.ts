@@ -9,7 +9,7 @@ export interface DraggableParams {
   snap: boolean;
   /** Surface size, used to keep items on screen. */
   bounds: { width: number; height: number };
-  /** Called continuously while dragging. */
+  /** Called at most once per frame while dragging. */
   onMove: (x: number, y: number) => void;
   /** Called once when the drag finishes. */
   onEnd: (x: number, y: number) => void;
@@ -30,6 +30,17 @@ function clamp(value: number, min: number, max: number): number {
  * Uses pointer capture so a fast drag cannot escape the element, and defers the
  * first move until the pointer has travelled a few pixels so that a plain click
  * still registers as a click rather than a zero-distance drag.
+ *
+ * ## Why the geometry is read once
+ *
+ * The element's size and origin are measured on `pointerdown` and never again
+ * during the drag. Reading `offsetWidth` inside `pointermove` - straight after
+ * the previous move wrote a new `left` - forces the browser to lay the page out
+ * synchronously, once per event. A high-rate mouse sends several of those per
+ * frame, and over a blurred panel each forced layout also invalidates the
+ * backdrop it samples, which is what made dragging a panel visibly lag behind
+ * the pointer. Moves are also folded into one per animation frame: nothing
+ * drawn between two frames is ever seen.
  */
 export function draggable(node: HTMLElement, params: DraggableParams) {
   let current = params;
@@ -40,7 +51,19 @@ export function draggable(node: HTMLElement, params: DraggableParams) {
   let startY = 0;
   let originX = 0;
   let originY = 0;
+  let width = 0;
+  let height = 0;
   let dragging = false;
+
+  /** The position asked for most recently, and the frame that will apply it. */
+  let nextX = 0;
+  let nextY = 0;
+  let frame = 0;
+
+  function applyMove() {
+    frame = 0;
+    current.onMove(nextX, nextY);
+  }
 
   function onPointerDown(event: PointerEvent) {
     if (current.disabled || event.button !== 0) return;
@@ -52,6 +75,10 @@ export function draggable(node: HTMLElement, params: DraggableParams) {
     startY = event.clientY;
     originX = node.offsetLeft;
     originY = node.offsetTop;
+    width = node.offsetWidth;
+    height = node.offsetHeight;
+    nextX = originX;
+    nextY = originY;
     dragging = false;
     node.setPointerCapture(pointerId);
   }
@@ -68,11 +95,14 @@ export function draggable(node: HTMLElement, params: DraggableParams) {
       node.classList.add('dragging');
     }
 
-    const maxX = Math.max(0, current.bounds.width - node.offsetWidth);
-    const maxY = Math.max(0, current.bounds.height - node.offsetHeight);
+    const maxX = Math.max(0, current.bounds.width - width);
+    const maxY = Math.max(0, current.bounds.height - height);
     const x = clamp(snapTo(originX + dx, current.gridSize, current.snap), 0, maxX);
     const y = clamp(snapTo(originY + dy, current.gridSize, current.snap), 0, maxY);
-    current.onMove(x, y);
+    if (x === nextX && y === nextY) return;
+    nextX = x;
+    nextY = y;
+    if (!frame) frame = requestAnimationFrame(applyMove);
   }
 
   function finish(event: PointerEvent) {
@@ -83,7 +113,12 @@ export function draggable(node: HTMLElement, params: DraggableParams) {
     if (dragging) {
       dragging = false;
       node.classList.remove('dragging');
-      current.onEnd(node.offsetLeft, node.offsetTop);
+      // Land exactly where the pointer let go, even if that frame never came.
+      if (frame) {
+        cancelAnimationFrame(frame);
+        applyMove();
+      }
+      current.onEnd(nextX, nextY);
       // Swallow the click that follows a drag so it does not launch the icon.
       node.addEventListener('click', (e) => e.stopPropagation(), { capture: true, once: true });
     }
@@ -99,6 +134,7 @@ export function draggable(node: HTMLElement, params: DraggableParams) {
       current = next;
     },
     destroy() {
+      if (frame) cancelAnimationFrame(frame);
       node.removeEventListener('pointerdown', onPointerDown);
       node.removeEventListener('pointermove', onPointerMove);
       node.removeEventListener('pointerup', finish);
@@ -119,7 +155,7 @@ export interface ResizableParams {
   size: { w: number; h: number };
   /** Surface size, used to keep the element on screen. */
   bounds: { width: number; height: number };
-  /** Called continuously while resizing. */
+  /** Called at most once per frame while resizing. */
   onResize: (w: number, h: number) => void;
   /** Called once when the resize finishes. */
   onEnd: (w: number, h: number) => void;
@@ -132,6 +168,9 @@ export interface ResizableParams {
  * one home: a grip only declares which edges it moves, with
  * `data-resize="e" | "s" | "se"`. Grips also carry `data-no-drag` so the
  * draggable action above leaves their pointer events alone.
+ *
+ * Like the drag, it measures the panel's position once on `pointerdown` and
+ * applies at most one size per frame.
  */
 export function resizable(node: HTMLElement, params: ResizableParams) {
   let current = params;
@@ -143,6 +182,8 @@ export function resizable(node: HTMLElement, params: ResizableParams) {
   let startY = 0;
   let originW = 0;
   let originH = 0;
+  let left = 0;
+  let top = 0;
   /**
    * The last size this action asked for.
    *
@@ -153,6 +194,12 @@ export function resizable(node: HTMLElement, params: ResizableParams) {
   let currentW = 0;
   let currentH = 0;
   let resized = false;
+  let frame = 0;
+
+  function applyResize() {
+    frame = 0;
+    current.onResize(currentW, currentH);
+  }
 
   function onPointerDown(event: PointerEvent) {
     if (current.disabled || event.button !== 0) return;
@@ -172,6 +219,8 @@ export function resizable(node: HTMLElement, params: ResizableParams) {
     // box the style sets, so start from that and never from the rendered size.
     originW = current.size.w;
     originH = current.size.h;
+    left = node.offsetLeft;
+    top = node.offsetTop;
     currentW = originW;
     currentH = originH;
     resized = false;
@@ -183,8 +232,8 @@ export function resizable(node: HTMLElement, params: ResizableParams) {
     if (pointerId === null || event.pointerId !== pointerId) return;
 
     // Never past the surface edge: the panel keeps its top-left corner.
-    const maxW = Math.max(current.min.w, current.bounds.width - node.offsetLeft);
-    const maxH = Math.max(current.min.h, current.bounds.height - node.offsetTop);
+    const maxW = Math.max(current.min.w, current.bounds.width - left);
+    const maxH = Math.max(current.min.h, current.bounds.height - top);
 
     const width =
       edge === 's'
@@ -207,7 +256,7 @@ export function resizable(node: HTMLElement, params: ResizableParams) {
     currentW = width;
     currentH = height;
     resized = true;
-    current.onResize(width, height);
+    if (!frame) frame = requestAnimationFrame(applyResize);
   }
 
   function finish(event: PointerEvent) {
@@ -216,6 +265,10 @@ export function resizable(node: HTMLElement, params: ResizableParams) {
     pointerId = null;
     grip = null;
     node.classList.remove('resizing');
+    if (frame) {
+      cancelAnimationFrame(frame);
+      applyResize();
+    }
     if (resized) current.onEnd(currentW, currentH);
     resized = false;
   }
@@ -230,6 +283,7 @@ export function resizable(node: HTMLElement, params: ResizableParams) {
       current = next;
     },
     destroy() {
+      if (frame) cancelAnimationFrame(frame);
       node.removeEventListener('pointerdown', onPointerDown);
       node.removeEventListener('pointermove', onPointerMove);
       node.removeEventListener('pointerup', finish);

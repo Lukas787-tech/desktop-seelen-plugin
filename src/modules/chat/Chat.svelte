@@ -597,10 +597,10 @@
   }
 
   .turn {
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     line-height: 1.5;
     overflow-wrap: anywhere;
-    border-radius: 10px;
+    border-radius: calc(10px * var(--round, 1));
     max-width: 100%;
   }
 
@@ -627,7 +627,7 @@
 
   .turn.notice {
     padding: 4px 8px;
-    border-radius: 8px;
+    border-radius: calc(8px * var(--round, 1));
     background: color-mix(in oklab, var(--accent, #7aa2f7) 14%, transparent);
   }
 
@@ -642,13 +642,13 @@
     width: 52px;
     height: 52px;
     object-fit: cover;
-    border-radius: 6px;
+    border-radius: calc(6px * var(--round, 1));
     display: block;
   }
 
   .thinking,
   .step {
-    font-size: 10.5px;
+    font-size: calc(10.5px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
@@ -711,8 +711,8 @@
   .step pre {
     margin: 3px 0 0;
     padding: 4px 6px;
-    border-radius: 6px;
-    font-size: 10px;
+    border-radius: calc(6px * var(--round, 1));
+    font-size: calc(10px * var(--text-scale, 1));
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     max-height: 160px;
@@ -740,7 +740,7 @@
   .meta {
     display: flex;
     gap: 8px;
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     opacity: 0;
     transition: opacity 0.12s ease;
@@ -760,7 +760,7 @@
 
   .meta button {
     flex: none;
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     cursor: pointer;
     padding: 0;
@@ -771,7 +771,7 @@
   }
 
   .activity {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     align-self: flex-start;
   }
@@ -781,7 +781,7 @@
     width: 5px;
     height: 10px;
     margin-left: 3px;
-    border-radius: 2px;
+    border-radius: calc(2px * var(--round, 1));
     background: var(--panel-fg-muted);
     animation: blink 1s steps(2, start) infinite;
   }
@@ -813,8 +813,8 @@
 
   .chip {
     padding: 3px 8px;
-    border-radius: 999px;
-    font-size: 10.5px;
+    border-radius: calc(999px * var(--round, 1));
+    font-size: calc(10.5px * var(--text-scale, 1));
     cursor: pointer;
     color: var(--panel-fg);
     background: color-mix(in oklab, var(--color-gray-300, #666) 20%, transparent);
@@ -830,7 +830,7 @@
     flex-direction: column;
     gap: 5px;
     padding: 6px 8px;
-    border-radius: 8px;
+    border-radius: calc(8px * var(--round, 1));
     background: color-mix(in oklab, var(--accent, #7aa2f7) 18%, transparent);
     border: 1px solid color-mix(in oklab, var(--accent, #7aa2f7) 40%, transparent);
   }
@@ -844,7 +844,7 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1.35;
     overflow-wrap: anywhere;
   }
@@ -854,7 +854,7 @@
   }
 
   .ask-reason {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
@@ -871,7 +871,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
   }
 
   .error {
@@ -913,7 +913,7 @@
   .pending-images button {
     padding: 0;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: calc(6px * var(--round, 1));
     overflow: hidden;
   }
 
@@ -928,7 +928,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
@@ -937,7 +937,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     cursor: pointer;
     padding: 0;
@@ -959,8 +959,8 @@
   .icon {
     width: 20px;
     height: 18px;
-    border-radius: 5px;
-    font-size: 12px;
+    border-radius: calc(5px * var(--round, 1));
+    font-size: calc(12px * var(--text-scale, 1));
     line-height: 1;
     color: var(--panel-fg-muted);
     cursor: pointer;
@@ -972,7 +972,7 @@
 
   .link {
     flex: none;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     cursor: pointer;
     padding: 0;
@@ -996,7 +996,7 @@
   }
 
   .hint {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     overflow-wrap: anywhere;
   }
@@ -1026,7 +1026,7 @@
     padding: 4px 6px;
     text-align: left;
     cursor: pointer;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
   }
 
   .conv-open .m-title {
@@ -1044,7 +1044,7 @@
     flex: none;
     width: 26px;
     height: 26px;
-    border-radius: 8px;
+    border-radius: calc(8px * var(--round, 1));
     cursor: pointer;
     color: var(--panel-fg-muted);
     background: color-mix(in oklab, var(--color-gray-300, #666) 18%, transparent);
@@ -1068,7 +1068,7 @@
     align-items: center;
     gap: 8px;
     padding: 5px 6px 5px 5px;
-    border-radius: 12px;
+    border-radius: calc(12px * var(--round, 1));
     background: color-mix(in oklab, var(--accent, #7aa2f7) 12%, transparent);
     border: 1px solid color-mix(in oklab, var(--accent, #7aa2f7) 28%, transparent);
   }
@@ -1120,7 +1120,7 @@
   }
 
   .phase {
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1128,7 +1128,7 @@
   }
 
   .heard {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     overflow: hidden;
     text-overflow: ellipsis;

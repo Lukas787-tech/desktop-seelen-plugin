@@ -315,8 +315,8 @@
     display: grid;
     place-items: center;
     border: 0;
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: calc(6px * var(--round, 1));
+    font-size: calc(12px * var(--text-scale, 1));
     line-height: 1;
     cursor: pointer;
     color: var(--panel-fg-muted);
@@ -347,11 +347,11 @@
     min-width: 0;
     padding: 2px 4px;
     border: 0;
-    border-radius: 5px;
+    border-radius: calc(5px * var(--round, 1));
     background: transparent;
     color: var(--panel-fg-muted);
     font: inherit;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1.2;
     cursor: pointer;
     overflow: hidden;
@@ -379,17 +379,17 @@
     flex: none;
     padding: 2px 2px;
     border: 0;
-    border-radius: 5px;
+    border-radius: calc(5px * var(--round, 1));
     background: transparent;
     color: var(--panel-fg-muted);
-    font-size: 9px;
+    font-size: calc(9px * var(--text-scale, 1));
     line-height: 1;
     cursor: pointer;
   }
 
   .sep {
     flex: none;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     opacity: 0.6;
   }
@@ -409,7 +409,7 @@
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     text-align: left;
     cursor: pointer;
   }
@@ -421,7 +421,7 @@
   /* Folder count, or a file's type when it has no icon of its own. */
   .count {
     flex: none;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     font-variant-numeric: tabular-nums;
     color: var(--panel-fg-muted);
   }
@@ -471,7 +471,7 @@
     gap: 3px;
     padding: 6px 3px;
     border: 0;
-    border-radius: 8px;
+    border-radius: calc(8px * var(--round, 1));
     background: transparent;
     color: var(--panel-fg);
     font: inherit;
@@ -479,9 +479,29 @@
     min-width: 0;
   }
 
+  /* A folder's tiles deal in as it opens: navigating replaces the listing. */
+  .tile {
+    animation: fx-tile-in var(--dur-slow) var(--ease) backwards;
+    animation-delay: calc(var(--lag, 0ms) + var(--nth, 0) * var(--step) * 0.5);
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      scale var(--dur) var(--ease-spring);
+  }
+
+  @supports (order: sibling-index()) {
+    .tile {
+      --nth: min(sibling-index() - 1, 14);
+    }
+  }
+
   .tile:hover,
   .tile:focus-visible {
     background: color-mix(in oklab, var(--color-gray-300, #666) 26%, transparent);
+  }
+
+  .tile:active {
+    scale: 0.94;
+    transition-duration: var(--dur-fast);
   }
 
   .art {
@@ -490,6 +510,14 @@
     width: 46%;
     min-width: 26px;
     aspect-ratio: 1;
+    transition:
+      translate var(--dur-slow) var(--ease-spring),
+      scale var(--dur-slow) var(--ease-spring);
+  }
+
+  .tile:hover .art {
+    translate: 0 -2px;
+    scale: 1.1;
   }
 
   .art img,
@@ -501,7 +529,7 @@
 
   .label {
     width: 100%;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     line-height: 1.25;
     text-align: center;
     overflow: hidden;
@@ -514,7 +542,7 @@
 
   .foot {
     flex: none;
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 

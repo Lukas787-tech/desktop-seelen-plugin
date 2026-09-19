@@ -122,6 +122,99 @@ body {
 }
 
 /*
+ * The Desktop widget's colour scheme, carried into the shell.
+ *
+ * `@ralfm/desktop` recolours itself by redefining Seelen's grey ramp on its own
+ * `body`, and writes the same scheme into the `--rs-scheme-*` variables here so
+ * the dock, the start menu and every popup are recoloured the same way. The
+ * ramp is rebuilt from six colours with the steps between mixed in OKLab,
+ * exactly as the widget builds its own.
+ *
+ * Three things about the selector:
+ *
+ *  - It is a style query on `--rs-scheme`, a quoted string like the preset, so
+ *    a session that has not registered these variables yet matches nothing and
+ *    the shell keeps its preset - never a ramp of unset colours, which would
+ *    take every fill in the shell down at once.
+ *  - It is `body:not([data-scheme])`. This stylesheet is injected into the
+ *    Desktop widget too, which carries its own scheme per display and marks its
+ *    `body` with it; without the exclusion a scheme chosen on one monitor would
+ *    paint the other monitor's surface even where that one follows the theme.
+ *  - Its specificity is above the preset blocks', so the preset's hue and
+ *    chroma are neutralised whichever order the two appear in - a Nord tinted
+ *    toward Midnight is not Nord.
+ *
+ * The ink, hairline and row-state tokens are recomposed here as well. They are
+ * declared on `:root` below, where they were resolved against Seelen's own ramp
+ * before this one ever existed; redeclared on `body`, they resolve against it.
+ */
+@container style(--rs-scheme: 'ramp') or style(--rs-scheme: 'full') {
+  body:not([data-scheme]) {
+    --color-gray-50: var(--rs-scheme-bg);
+    --color-gray-100: var(--rs-scheme-bg1);
+    --color-gray-200: var(--rs-scheme-bg2);
+    --color-gray-300: color-mix(in oklab, var(--rs-scheme-bg2) 50%, var(--rs-scheme-comment));
+    --color-gray-400: var(--rs-scheme-comment);
+    --color-gray-500: color-mix(in oklab, var(--rs-scheme-comment) 50%, var(--rs-scheme-dim));
+    --color-gray-600: var(--rs-scheme-dim);
+    --color-gray-700: color-mix(in oklab, var(--rs-scheme-dim) 50%, var(--rs-scheme-fg));
+    --color-gray-800: color-mix(in oklab, var(--rs-scheme-dim) 25%, var(--rs-scheme-fg));
+    --color-gray-900: var(--rs-scheme-fg);
+
+    --rs-hue: h;
+    --rs-chroma: 0;
+    --rs-preset-accent: var(--rs-scheme-accent);
+
+    --rs-fg: var(--color-gray-900);
+    --rs-fg-muted: var(--color-gray-600);
+    --rs-line: color-mix(in oklab, var(--color-gray-300) calc(var(--rs-edge) * 1%), transparent);
+    --rs-divider: color-mix(in oklab, var(--color-gray-300) 26%, transparent);
+    --rs-hover: color-mix(in oklab, var(--color-gray-300) 26%, transparent);
+    --rs-pressed: color-mix(in oklab, var(--color-gray-300) 38%, transparent);
+    --rs-mark: var(--rs-fg);
+    --rs-selected-edge: color-mix(in oklab, var(--rs-fg) 45%, transparent);
+    --rs-tile-hover: color-mix(in oklab, var(--color-gray-500) 22%, transparent);
+    --rs-field: color-mix(in oklab, var(--color-gray-100) 45%, transparent);
+    --rs-chip: color-mix(in oklab, var(--color-gray-300) 22%, transparent);
+    --rs-chip-hover: color-mix(in oklab, var(--color-gray-300) 38%, transparent);
+  }
+}
+
+/* A named scheme's own reds, greens and blues for state; a custom one keeps Seelen's. */
+@container style(--rs-scheme: 'full') {
+  body:not([data-scheme]) {
+    --color-red-400: var(--rs-scheme-red);
+    --color-red-500: var(--rs-scheme-red);
+    --color-red-600: var(--rs-scheme-red);
+    --color-red-700: var(--rs-scheme-red);
+    --color-orange-400: var(--rs-scheme-orange);
+    --color-orange-500: var(--rs-scheme-orange);
+    --color-orange-600: var(--rs-scheme-orange);
+    --color-orange-700: var(--rs-scheme-orange);
+    --color-yellow-400: var(--rs-scheme-yellow);
+    --color-yellow-500: var(--rs-scheme-yellow);
+    --color-yellow-600: var(--rs-scheme-yellow);
+    --color-yellow-700: var(--rs-scheme-yellow);
+    --color-green-400: var(--rs-scheme-green);
+    --color-green-500: var(--rs-scheme-green);
+    --color-green-600: var(--rs-scheme-green);
+    --color-green-700: var(--rs-scheme-green);
+    --color-cyan-400: var(--rs-scheme-cyan);
+    --color-cyan-500: var(--rs-scheme-cyan);
+    --color-cyan-600: var(--rs-scheme-cyan);
+    --color-cyan-700: var(--rs-scheme-cyan);
+    --color-blue-400: var(--rs-scheme-blue);
+    --color-blue-500: var(--rs-scheme-blue);
+    --color-blue-600: var(--rs-scheme-blue);
+    --color-blue-700: var(--rs-scheme-blue);
+    --color-purple-400: var(--rs-scheme-purple);
+    --color-purple-500: var(--rs-scheme-purple);
+    --color-purple-600: var(--rs-scheme-purple);
+    --color-purple-700: var(--rs-scheme-purple);
+  }
+}
+
+/*
  * The colour the glass is made of.
  *
  * Normally the preset's ground, which is a fixed near-black with the preset's

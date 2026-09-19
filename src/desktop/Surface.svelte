@@ -1,22 +1,23 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { SeelenSettingsWidgetId } from '@seelen-ui/lib';
 
-  import { Disposables, SeelenCommand, Widget, invoke } from '$lib/seelen';
+  import { Disposables, SeelenCommand, SeelenEvent, Widget, invoke, subscribe } from '$lib/seelen';
   import { keepFittedToMonitor } from '$lib/surface';
   import { resolveOwnMonitor } from '$lib/monitor';
   import { keepTextInputUsable } from '$lib/input';
-  import { applySurfaceVars } from '$lib/appearance';
+  import { firedShortcut } from '$lib/hotkeys';
+  import { applySurfaceVars, applyUserCss } from '$lib/appearance';
   import { syncShellStyle } from '$lib/shellstyle';
   import { sampleWallpaperTint } from '$lib/glass';
-  import { config, type ConfigKey } from '$lib/config.svelte';
+  import { DEFAULT_CONFIG, config, type ConfigKey } from '$lib/config.svelte';
+  import { LOOKS, currentLook } from '$lib/looks';
+  import { SCHEME_OPTIONS, schemePolarity } from '$lib/schemes';
   import { MODULES, MODULE_GROUPS, MODULE_ORDER, moduleKeys, modulesInGroup } from '$lib/modules';
-  import { store, type PanelKind } from '$lib/store.svelte';
+  import { findFreeSpot, isOffSurface, overlaps, store, type PanelKind } from '$lib/store.svelte';
   import { icons } from '$lib/icons.svelte';
   import { launch, revealInExplorer } from '$lib/launch.svelte';
-  import { media } from '$lib/media.svelte';
   import { showDesktop } from '$lib/windows.svelte';
-  import { system } from '$lib/system.svelte';
   import { notes } from '$lib/notes.svelte';
   import { chat } from '$lib/chat.svelte';
   import { wallpapers } from '$lib/wallpapers.svelte';
@@ -31,10 +32,19 @@
   import Panel from '$modules/Panel.svelte';
   import ContextMenu from '$modules/ContextMenu.svelte';
   import ModuleSettings from '$modules/ModuleSettings.svelte';
+  import AppearanceSettings from '$modules/AppearanceSettings.svelte';
+  import { applyLook, applyPreset } from '$lib/apply-appearance';
+  import { presets } from '$lib/presets.svelte';
   import { menuSeparator, type MenuItem } from '$lib/menu';
   import { overlay } from '$lib/overlay.svelte';
   import ModuleView from '$modules/ModuleView.svelte';
   import AssistantSettings from '$modules/chat/AssistantSettings.svelte';
+  import { gameMode, ownsGameMode } from '$lib/gamemode.svelte';
+  import { padControl } from '$lib/padcontrol.svelte';
+  import GameMode from '$modules/gamemode/GameMode.svelte';
+  import GameModeSettings from '$modules/gamemode/GameModeSettings.svelte';
+  import PadCursor from '$modules/gamemode/PadCursor.svelte';
+  import type { FocusedApp, PhysicalMonitor } from '@seelen-ui/lib/types';
 
   const cfg = $derived(config.current);
   const occlusion = new OcclusionWatcher();
@@ -50,13 +60,16 @@
   const covered = $derived(occlusion.covered && !layer.lifted);
 
   /*
-   * The appearance settings go on the document root rather than on this
-   * element, because `base.css` composes `--panel-bg` out of them *there* -
-   * and a custom property's `var()`s are substituted where the property is
-   * declared, not where it is used. Set one level down and the composition
-   * never sees them. See `src/lib/appearance.ts`.
+   * The appearance settings go on `body` rather than on this element, because
+   * `base.css` composes tokens out of them *there* - and a custom property's
+   * `var()`s are substituted where the property is declared, not where it is
+   * used. Set one level down and the composition never sees them. See
+   * `src/lib/appearance.ts`.
    */
   $effect(() => applySurfaceVars(cfg));
+
+  /* The user's own stylesheet, kept last in the document; see `applyUserCss`. */
+  $effect(() => applyUserCss(cfg.customCss));
 
   /*
    * ...and the same choices outward, into the shell theme's own variables.
@@ -75,8 +88,11 @@
   $effect(() => {
     const url = stillUrl;
     const alpha = cfg.panelOpacity / 100;
+    // A scheme changes both the ground the glass is mixed from and the ink it
+    // has to carry, so choosing one re-measures.
+    const ink = schemePolarity(cfg.colorScheme, cfg.schemeGround) === 'light' ? 'dark' : 'light';
     let dropped = false;
-    void sampleWallpaperTint(url, alpha).then((result) => {
+    void sampleWallpaperTint(url, alpha, ink).then((result) => {
       if (dropped) return;
       glassTint = result.tint;
       noteAction(`glass tint: ${result.note} ${result.tint ?? '-'}`);
@@ -91,6 +107,85 @@
   let bounds = $state({ width: window.innerWidth, height: window.innerHeight });
   let ready = $state(false);
 
+  /*
+   * Which display this replica is, and whether it is the one game mode belongs
+   * to. Both replicas run this file; exactly one of them may draw the launcher,
+   * and `gameModeDisplay` - a setting with no per-monitor scope - is what
+   * decides it. See `ownsGameMode`.
+   */
+  let ownMonitor = $state<PhysicalMonitor | null>(null);
+  const ownMonitorId = Widget.self.decoded.monitorId ?? null;
+  const ownsGame = $derived(
+    ownsGameMode(ownMonitorId, cfg.gameModeDisplay, ownMonitor?.isPrimary ?? false),
+  );
+
+  /*
+   * A display that stops being the launcher's closes it, rather than leaving
+   * two of them up after the setting is pointed somewhere else.
+   */
+  $effect(() => {
+    if (!ownsGame && gameMode.active) gameMode.leave('this display is no longer the launcher');
+  });
+
+  /*
+   * The controller, driving the ordinary desktop.
+   *
+   * Only while game mode is *not* up: the launcher has its own navigation, and
+   * a second reader translating the same presses into key events at the same
+   * time would double every one of them.
+   */
+  $effect(() => {
+    padControl.configure({
+      preset: cfg.padPreset,
+      overrides: cfg.padCustomKeys,
+      pointer: cfg.padPointer,
+      cursor: {
+        speed: cfg.padPointerSpeed,
+        accel: cfg.padPointerAccel / 100,
+        scrollSpeed: cfg.padScrollSpeed,
+        size: cfg.padPointerSize,
+        hideAfter: cfg.padPointerHide,
+        stickScrolls: cfg.padStickScrolls,
+      },
+    });
+  });
+
+  $effect(() => {
+    if (cfg.padEnabled && cfg.padDesktop && !gameMode.active) padControl.start();
+    else padControl.stop();
+    // Its loop belongs to this surface; a reload must not leave one running.
+    return () => padControl.stop();
+  });
+
+  /*
+   * ...and the keyboard it needs to be read at all.
+   *
+   * `navigator.getGamepads()` reports nothing unless the document has focus,
+   * and a desktop-preset widget is never focused by being clicked. So it is
+   * asked for at the one moment the user has plainly said they want the desktop
+   * and not what is over it: "show desktop", which is exactly what lifts this
+   * surface over Explorer's. Anything else would be taking the keyboard out of
+   * whatever they were typing in.
+   */
+  $effect(() => {
+    if (!cfg.padEnabled || !cfg.padDesktop || gameMode.active || !layer.lifted) return;
+    void Widget.self.focus().catch(() => {});
+  });
+
+  /*
+   * True for the surface's first moments, while its icons and panels come in
+   * as a wave from the top-left corner (see `Panel.svelte`). Off afterwards,
+   * so a module switched on later arrives at once rather than waiting for its
+   * place in a wave that has already passed.
+   */
+  let booting = $state(true);
+
+  $effect(() => {
+    if (!ready) return;
+    const timer = setTimeout(() => (booting = false), 2600);
+    return () => clearTimeout(timer);
+  });
+
   let selection = $state<Set<string>>(new Set());
   let dialog = $state<'none' | 'add' | 'wallpaper'>('none');
   /** The module whose settings dialog is open, if any. */
@@ -102,52 +197,139 @@
     store.state.panels.filter((p) => cfg[MODULES[p.kind].enabledKey] === true),
   );
 
+  /*
+   * Where a module lands when it is switched on.
+   *
+   * Every kind has a place in `DEFAULT_PANEL_LAYOUT`, but thirty-two modules do
+   * not fit on a 1080p display, and the later ones are laid out for a wide one:
+   * switched on as they were, they arrived on top of another panel or past the
+   * edge of the screen, where nothing can drag them back. So a module that was
+   * off a moment ago and now overlaps something moves to the first free space,
+   * and a panel that is off the display altogether - a resolution change, a
+   * layout from a wider screen - is brought back on. A layout the user arranged
+   * with overlaps on purpose is left alone: only the switch-on is moved.
+   */
+  let shownBefore: Set<PanelKind> | null = null;
+
+  $effect(() => {
+    const shown = visiblePanels;
+    const surface = bounds;
+    if (!ready) return;
+    untrack(() => {
+      const previous = shownBefore;
+      shownBefore = new Set(shown.map((panel) => panel.kind));
+      for (const panel of shown) {
+        const others = shown.filter((other) => other.id !== panel.id);
+        const lost = isOffSurface(panel, surface);
+        const landedOnSomething = previous !== null && !previous.has(panel.kind) && others.some((o) => overlaps(panel, o));
+        if (!lost && !landedOnSomething) continue;
+
+        const spot = findFreeSpot({ w: panel.w, h: panel.h }, others, surface, cfg.snapToGrid ? cfg.gridSize / 4 : 20);
+        if (spot) {
+          store.placePanel(panel.id, spot.x, spot.y);
+        } else if (lost) {
+          store.placePanel(
+            panel.id,
+            Math.max(0, Math.min(panel.x, surface.width - Math.min(panel.w, surface.width))),
+            Math.max(0, Math.min(panel.y, surface.height - Math.min(panel.h, surface.height))),
+          );
+        }
+        noteAction(`layout: placed ${panel.kind} at ${panel.x},${panel.y} (${lost ? 'was off the display' : 'was covering another panel'})`);
+      }
+    });
+  });
+
   onMount(() => {
     void (async () => {
       // Geometry first: everything else positions against the surface size.
       disposables.add(
         keepFittedToMonitor((m) => {
           occlusion.setMonitor(m);
+          ownMonitor = m;
           bounds = { width: window.innerWidth, height: window.innerHeight };
         }),
       );
 
       const own = Widget.self.decoded.monitorId ?? 'primary';
-      await Promise.all([store.load(own), notes.load(), chat.load()]);
 
-      // The Win+Shift+D shortcut triggers the widget, and a trigger reaches
-      // every replica - so only the primary one acts, or the second call would
-      // see nothing left up and put all the windows back again.
-      const monitor = await resolveOwnMonitor();
+      /*
+       * Only what decides the first frame is waited for: which modules are on
+       * (the config) and where everything sits (the store). This used to hold
+       * the panels back until the assistant's conversation file, the icon
+       * packs, the wallpaper library, both window watchers and the media and
+       * system streams had all answered - every one of which fills itself in
+       * perfectly well after the panels are up.
+       */
+      const assistant = chat.load().catch((err) => console.error('[surface] assistant did not load', err));
+      const [, , offConfig] = await Promise.all([store.load(own), notes.load(), config.start()]);
+      disposables.addFn(offConfig);
+      ready = true;
+
+      // Every store is event-driven; none of these start a polling timer. The
+      // media and system streams are not among them: their panels hold them.
+      const [subscriptions, monitor] = await Promise.all([
+        Promise.all([icons.start(), wallpapers.start(), occlusion.start(), layer.start()]),
+        resolveOwnMonitor(),
+        assistant,
+      ]);
+      for (const sub of subscriptions) disposables.addFn(sub);
+
+      /*
+       * A trigger reaches every replica, so each one decides for itself what to
+       * do with it.
+       *
+       * Three things arrive this way. The command palette and the overlay send
+       * `{ action: 'game-mode' }`, and only the replica that owns the launcher
+       * acts on it; `customArgs` is free-form on the host's side, so it is read
+       * defensively rather than cast. The two declared shortcuts carry nothing
+       * at all - `widget trigger` takes no arguments - so which of them fired is
+       * asked of the keyboard, and `show-desktop` is what an unclear answer
+       * means, because that is the binding this widget has always had. Only the
+       * primary replica shows the desktop: a second call would see nothing left
+       * up and put every window back again.
+       */
+      Widget.self.onTrigger((payload) => {
+        const args = payload?.customArgs as Record<string, unknown> | null | undefined;
+        if (args?.action === 'game-mode') {
+          if (ownsGame) gameMode.toggle('the command palette');
+          return;
+        }
+        void firedShortcut().then((id) => {
+          if (id === 'game-mode') {
+            if (ownsGame) gameMode.toggle('its shortcut');
+          } else if (monitor?.isPrimary) {
+            void showDesktop();
+          }
+        });
+      });
+
       if (monitor?.isPrimary) {
-        Widget.self.onTrigger(() => void showDesktop());
         // Reminders are shared by every replica; only one may chime.
         chat.claimTimers();
       }
 
-      // Every store is event-driven; none of these start a polling timer.
-      const subscriptions = await Promise.all([
-        config.start(),
-        icons.start(),
-        wallpapers.start(),
-        occlusion.start(),
-        layer.start(),
-        media.start(),
-        system.start(),
-      ]);
-      for (const sub of subscriptions.flat()) disposables.addFn(sub);
+      /*
+       * Who holds the foreground, which is what decides whether a controller
+       * can be read at all. Game mode asks for it back when it loses it; see
+       * `gamemode.svelte.ts`.
+       */
+      disposables.add(
+        subscribe(SeelenEvent.GlobalFocusChanged, ({ payload }) => {
+          const app = payload as FocusedApp;
+          const ours =
+            app.hwnd === Widget.self.windowId || app.ownerHwnd === Widget.self.windowId;
+          if (ours) gameMode.onForegroundTaken();
+          else gameMode.onForegroundLost();
+        }),
+      );
 
-      ready = true;
+      if (ownsGame && cfg.gameModeAtStart) gameMode.enter('start-up');
 
       // Leave a snapshot on disk: this surface sits behind every window and has
       // no visible console, so this is how a run gets inspected afterwards.
       void writeDiagnostics(Widget.self.id, Widget.self.decoded.monitorId, {
         icons: store.state.icons.length,
         panels: visiblePanels.length,
-        mediaSessions: media.players.length,
-        audioDevices: media.outputs.length,
-        mixerSessions: media.defaultOutput?.sessions.length ?? 0,
-        cpuCores: system.cores.length,
         wallpapers: wallpapers.entries.length,
       });
     })().catch((err) => {
@@ -184,6 +366,10 @@
     return () => {
       window.removeEventListener('resize', onResize);
       disposables.dispose();
+      // The launcher holds the game library, the pad reader and a key listener
+      // of its own; leaving releases all three.
+      gameMode.leave('the surface was torn down');
+      padControl.stop();
       void store.flush();
       void notes.flush();
       void chat.flush();
@@ -195,6 +381,61 @@
     void invoke(SeelenCommand.TriggerWidget, {
       payload: { id: SeelenSettingsWidgetId },
     }).catch((err) => console.error('[surface] could not open settings', err));
+  }
+
+  /*
+   * Rendered through the overlay rather than this component's own `dialog`
+   * state, so a module's settings dialog can hand over to it as well.
+   */
+  function openAppearance() {
+    overlay.openDialog(AppearanceSettings, { onclose: () => overlay.closeDialog() });
+  }
+
+  function openGameModeSettings() {
+    overlay.openDialog(GameModeSettings, { onclose: () => overlay.closeDialog() });
+  }
+
+  /**
+   * Game mode, from the desktop it takes over.
+   *
+   * "Open here" is deliberately more than a toggle: on a display that is not
+   * the launcher's, it moves the setting first. Otherwise the menu would offer
+   * something that silently did nothing on three of four displays.
+   */
+  function gameModeSubmenu(): MenuItem[] {
+    return [
+      {
+        label: gameMode.active ? 'Close game mode' : 'Open game mode here',
+        hint: !gameMode.active && !ownsGame ? 'moves it to this display' : undefined,
+        action: () => {
+          if (gameMode.active) {
+            gameMode.leave('the desktop menu');
+            return;
+          }
+          if (!ownsGame && ownMonitorId) config.set('gameModeDisplay', ownMonitorId, 'all');
+          gameMode.enter('the desktop menu');
+        },
+      },
+      {
+        label: 'Open at start-up',
+        checked: cfg.gameModeAtStart,
+        action: () => config.set('gameModeAtStart', !cfg.gameModeAtStart, 'all'),
+      },
+      menuSeparator,
+      {
+        label: 'Read the controller',
+        checked: cfg.padEnabled,
+        action: () => config.set('padEnabled', !cfg.padEnabled, 'all'),
+      },
+      {
+        label: 'Drive the desktop with the controller',
+        hint: 'this desktop only',
+        checked: cfg.padDesktop,
+        action: () => config.set('padDesktop', !cfg.padDesktop, 'all'),
+      },
+      menuSeparator,
+      { label: 'Game mode settings...', action: openGameModeSettings },
+    ];
   }
 
   /**
@@ -213,6 +454,44 @@
     };
   }
 
+  /** Whole looks, one click each - a desktop's theme switcher. */
+  function lookSubmenu(): MenuItem[] {
+    const active = currentLook(cfg, DEFAULT_CONFIG);
+    void presets.load();
+    const saved: MenuItem[] = presets.list.length
+      ? [
+          { label: 'Your presets', header: true },
+          ...presets.list.map((preset) => ({
+            label: preset.label,
+            hint: preset.source === 'ai' ? 'AI' : undefined,
+            action: () => void applyPreset(preset),
+          })),
+          { label: 'Built in', header: true },
+        ]
+      : [];
+    return [
+      ...saved,
+      ...LOOKS.map((look) => ({
+        label: look.label,
+        checked: active === look.id,
+        action: () => applyLook(look),
+      })),
+      menuSeparator,
+      { label: 'Appearance...', action: openAppearance },
+    ];
+  }
+
+  /** Colour alone, leaving every other appearance setting where it is. */
+  function schemeSubmenu(): MenuItem[] {
+    const [theme, custom, ...named] = SCHEME_OPTIONS.map((option) => ({
+      label: option.label,
+      checked: cfg.colorScheme === option.value,
+      hint: cfg.colorScheme === option.value && config.overrides.has('colorScheme') ? 'this display' : undefined,
+      action: () => config.set('colorScheme', option.value),
+    }));
+    return [...(theme ? [theme] : []), ...(custom ? [custom] : []), menuSeparator, ...named];
+  }
+
   /** Show/hide every module, plus the escape hatches for a customised display. */
   function modulesSubmenu(): MenuItem[] {
     // Only the ones this display is hiding for itself: with most modules off
@@ -226,7 +505,7 @@
       config.overrides.has(key),
     );
 
-    // Grouped rather than listed flat: eighteen modules in one column is more
+    // Grouped rather than listed flat: thirty-two modules in one column is more
     // than a menu can be read at a glance.
     const groups: MenuItem[] = [];
     for (const group of MODULE_GROUPS) {
@@ -261,8 +540,12 @@
     overlay.openMenu(event, [
       { label: 'Add to desktop...', action: () => (dialog = 'add') },
       { label: 'Change wallpaper...', action: () => (dialog = 'wallpaper') },
+      { label: 'Appearance...', action: openAppearance },
       menuSeparator,
+      { label: 'Look', items: lookSubmenu() },
+      { label: 'Colour scheme', items: schemeSubmenu() },
       { label: 'Modules', items: modulesSubmenu() },
+      { label: 'Game mode', items: gameModeSubmenu() },
       menuSeparator,
       toggleItem('lockLayout', 'Lock layout'),
       toggleItem('snapToGrid', 'Snap to grid'),
@@ -332,6 +615,8 @@
         action: () => config.clearOverrides(overridden),
       },
       menuSeparator,
+      { label: 'Look', items: lookSubmenu() },
+      { label: 'Appearance...', action: openAppearance },
       { label: 'Desktop settings...', action: openSettings },
     ]);
   }
@@ -371,6 +656,8 @@
 <main
   class="surface"
   class:no-animations={!cfg.animations}
+  class:booting
+  class:covered
   oncontextmenu={onSurfaceContext}
   onclick={clearSelection}
 >
@@ -380,7 +667,14 @@
     onstill={(url) => (stillUrl = url)}
   />
 
-  {#if ready}
+  <!--
+    While the launcher is up the icons and the panels are not merely hidden,
+    they are unmounted - every module acquires its host subscriptions on mount,
+    so this is what makes game mode cost nothing but itself while a game is
+    running. The wallpaper above stays, because the launcher can use it as its
+    own backdrop.
+  -->
+  {#if ready && !gameMode.active}
     <div class="items">
       {#each store.state.icons as icon (icon.id)}
         <IconView
@@ -404,6 +698,13 @@
       {/each}
     </div>
   {/if}
+
+  {#if gameMode.active}
+    <GameMode wallpaperUrl={stillUrl} />
+  {/if}
+
+  <!-- Over everything, including the launcher: it is the pointer. -->
+  <PadCursor />
 
   {#if overlay.menu}
     {@const open = overlay.menu}

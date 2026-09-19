@@ -21,6 +21,18 @@
   import Games from './games/Games.svelte';
   import Notes from './notes/Notes.svelte';
   import Chat from './chat/Chat.svelte';
+  import Weather from './weather/Weather.svelte';
+  import Perf from './perf/Perf.svelte';
+  import Calc from './calc/Calc.svelte';
+  import Tray from './tray/Tray.svelte';
+  import Alarms from './alarms/Alarms.svelte';
+  import Agenda from './agenda/Agenda.svelte';
+  import Board from './board/Board.svelte';
+  import Habits from './habits/Habits.svelte';
+  import Links from './links/Links.svelte';
+  import Apps from './apps/Apps.svelte';
+  import Usage from './usage/Usage.svelte';
+  import Browser from './browser/Browser.svelte';
 
   interface Props {
     kind: PanelKind;
@@ -80,4 +92,28 @@
   <Notes />
 {:else if kind === 'chat'}
   <Chat />
+{:else if kind === 'weather'}
+  <Weather />
+{:else if kind === 'perf'}
+  <Perf />
+{:else if kind === 'calc'}
+  <Calc />
+{:else if kind === 'tray'}
+  <Tray />
+{:else if kind === 'alarms'}
+  <Alarms {covered} />
+{:else if kind === 'agenda'}
+  <Agenda />
+{:else if kind === 'board'}
+  <Board />
+{:else if kind === 'habits'}
+  <Habits />
+{:else if kind === 'links'}
+  <Links />
+{:else if kind === 'apps'}
+  <Apps />
+{:else if kind === 'usage'}
+  <Usage {covered} />
+{:else if kind === 'browser'}
+  <Browser />
 {/if}

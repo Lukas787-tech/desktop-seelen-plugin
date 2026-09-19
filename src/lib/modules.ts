@@ -15,7 +15,7 @@ import type { PanelKind } from './store.svelte';
  * `allowSetByMonitor: true`, which is what makes the per-display scope work.
  */
 
-export type FieldType = 'switch' | 'range' | 'select' | 'text';
+export type FieldType = 'switch' | 'range' | 'select' | 'text' | 'color' | 'font' | 'number';
 
 export interface ModuleField {
   key: ConfigKey;
@@ -33,14 +33,16 @@ export interface ModuleField {
   placeholder?: string;
 }
 
-/** Sections of the `Modules` menu, so eighteen entries stay readable. */
-export type ModuleGroup = 'time' | 'system' | 'devices' | 'desktop';
+/** Sections of the `Modules` menu, so thirty-two entries stay readable. */
+export type ModuleGroup = 'time' | 'productivity' | 'system' | 'devices' | 'desktop' | 'web';
 
 export const MODULE_GROUPS: readonly { id: ModuleGroup; label: string }[] = [
   { id: 'time', label: 'Time' },
+  { id: 'productivity', label: 'Productivity' },
   { id: 'system', label: 'System' },
   { id: 'devices', label: 'Devices' },
   { id: 'desktop', label: 'Desktop' },
+  { id: 'web', label: 'Web' },
 ];
 
 export interface ModuleDefinition {
@@ -522,7 +524,7 @@ export const MODULES: Record<PanelKind, ModuleDefinition> = {
   notes: {
     kind: 'notes',
     title: 'Notes',
-    group: 'desktop',
+    group: 'productivity',
     enabledKey: 'moduleNotes',
     quick: ['notesHideCompleted'],
     fields: [
@@ -546,7 +548,7 @@ export const MODULES: Record<PanelKind, ModuleDefinition> = {
   chat: {
     kind: 'chat',
     title: 'Assistant',
-    group: 'desktop',
+    group: 'web',
     enabledKey: 'moduleChat',
     quick: ['chatRouting', 'chatTools', 'chatContext', 'chatStream'],
     fields: [
@@ -610,6 +612,327 @@ export const MODULES: Record<PanelKind, ModuleDefinition> = {
       },
     ],
   },
+  weather: {
+    kind: 'weather',
+    title: 'Weather',
+    group: 'web',
+    enabledKey: 'moduleWeather',
+    quick: ['weatherShowHourly', 'weatherShowDetails'],
+    fields: [
+      {
+        key: 'weatherPlace',
+        label: 'Place',
+        description: 'A city or town. Searching from the panel itself picks the exact one.',
+        type: 'text',
+        placeholder: 'Berlin, Germany',
+      },
+      {
+        key: 'weatherUnits',
+        label: 'Units',
+        type: 'select',
+        options: [
+          { label: 'Metric (°C, km/h)', value: 'metric' },
+          { label: 'Imperial (°F, mph)', value: 'imperial' },
+        ],
+      },
+      { key: 'weatherDays', label: 'Days ahead', type: 'range', min: 3, max: 14, step: 1, unit: ' d' },
+      { key: 'weatherShowHourly', label: 'Show the next 24 hours', type: 'switch' },
+      {
+        key: 'weatherShowDetails',
+        label: 'Show the details',
+        description: 'Humidity, wind, UV, rain, sunrise and sunset.',
+        type: 'switch',
+      },
+    ],
+  },
+  agenda: {
+    kind: 'agenda',
+    title: 'Agenda',
+    group: 'productivity',
+    enabledKey: 'moduleAgenda',
+    quick: ['agendaShowWeek', 'agendaReminders'],
+    fields: [
+      { key: 'agendaDaysAhead', label: 'Look ahead', type: 'range', min: 1, max: 60, step: 1, unit: ' d' },
+      {
+        key: 'agendaShowWeek',
+        label: 'Show the week strip',
+        description: 'Seven days across the top, with a dot on each day something is on.',
+        type: 'switch',
+      },
+      {
+        key: 'agendaReminders',
+        label: 'Ring reminders',
+        description:
+          'While an Agenda panel is on any display. Only one display rings, however many show it.',
+        type: 'switch',
+      },
+      {
+        key: 'agendaDefaultRemind',
+        label: 'Default reminder',
+        description: 'What a new event starts with; each one can be changed.',
+        type: 'select',
+        options: [
+          { label: 'None', value: 'none' },
+          { label: 'At the start', value: '0' },
+          { label: '5 minutes before', value: '5' },
+          { label: '10 minutes before', value: '10' },
+          { label: '15 minutes before', value: '15' },
+          { label: '30 minutes before', value: '30' },
+          { label: '1 hour before', value: '60' },
+        ],
+      },
+      {
+        key: 'agendaMonthFirst',
+        label: 'Read 3/10 as 10 March',
+        description: 'For dates typed with a slash. Dates with dots are always day first.',
+        type: 'switch',
+      },
+    ],
+  },
+  alarms: {
+    kind: 'alarms',
+    title: 'Alarms',
+    group: 'time',
+    enabledKey: 'moduleAlarms',
+    quick: ['alarms24h'],
+    fields: [
+      {
+        key: 'alarmsDefaultTab',
+        label: 'Opens on',
+        type: 'select',
+        options: [
+          { label: 'Timers', value: 'timers' },
+          { label: 'Stopwatch', value: 'stopwatch' },
+          { label: 'Alarms', value: 'alarms' },
+        ],
+      },
+      {
+        key: 'alarmsRings',
+        label: 'Rings',
+        description: 'How many times a finished timer or an alarm chimes before it goes quiet.',
+        type: 'range',
+        min: 1,
+        max: 20,
+        step: 1,
+      },
+      { key: 'alarmsVolume', label: 'Volume', type: 'range', min: 5, max: 100, step: 5, unit: '%' },
+      { key: 'alarms24h', label: '24-hour time', type: 'switch' },
+    ],
+  },
+  perf: {
+    kind: 'perf',
+    title: 'Performance',
+    group: 'system',
+    enabledKey: 'modulePerf',
+    quick: ['perfShowCores', 'perfFillGraph', 'perfShowGrid'],
+    fields: [
+      {
+        key: 'perfDefaultTab',
+        label: 'Opens on',
+        type: 'select',
+        options: [
+          { label: 'CPU', value: 'cpu' },
+          { label: 'Memory', value: 'memory' },
+          { label: 'Disk', value: 'disk' },
+          { label: 'Network', value: 'network' },
+        ],
+      },
+      { key: 'perfShowCores', label: 'Show every core', type: 'switch' },
+      { key: 'perfFillGraph', label: 'Fill under the graph', type: 'switch' },
+      { key: 'perfShowGrid', label: 'Show guide lines', type: 'switch' },
+    ],
+  },
+  usage: {
+    kind: 'usage',
+    title: 'Screen time',
+    group: 'system',
+    enabledKey: 'moduleUsage',
+    quick: ['usageShowWeek'],
+    fields: [
+      {
+        key: 'usageIdleMinutes',
+        label: 'Away after',
+        description:
+          'No pointer movement and no change of window for this long stops the count. A fullscreen window never counts as away.',
+        type: 'range',
+        min: 1,
+        max: 30,
+        step: 1,
+        unit: ' min',
+      },
+      { key: 'usageShowWeek', label: 'Show the week', type: 'switch' },
+      { key: 'usageMax', label: 'Apps to list', type: 'range', min: 3, max: 25, step: 1 },
+      {
+        key: 'usageIgnore',
+        label: 'Never count',
+        description: 'Application names separated by commas.',
+        type: 'text',
+        placeholder: 'LockApp, Seelen UI',
+      },
+    ],
+  },
+  apps: {
+    kind: 'apps',
+    title: 'Apps',
+    group: 'desktop',
+    enabledKey: 'moduleApps',
+    quick: ['appsShowFavourites', 'appsShowRecent', 'appsShowAll'],
+    fields: [
+      {
+        key: 'appsView',
+        label: 'View',
+        type: 'select',
+        options: [
+          { label: 'List', value: 'list' },
+          { label: 'Tiles', value: 'grid' },
+        ],
+      },
+      {
+        key: 'appsTileSize',
+        label: 'Tile size',
+        description: 'Tiles view only.',
+        type: 'range',
+        min: 32,
+        max: 96,
+        step: 4,
+        unit: 'px',
+      },
+      { key: 'appsShowFavourites', label: 'Show favourites', type: 'switch' },
+      { key: 'appsShowRecent', label: 'Show recently opened', type: 'switch' },
+      {
+        key: 'appsShowAll',
+        label: 'List every app',
+        description: 'Otherwise the full list only appears while searching.',
+        type: 'switch',
+      },
+    ],
+  },
+  board: {
+    kind: 'board',
+    title: 'Board',
+    group: 'productivity',
+    enabledKey: 'moduleBoard',
+    quick: ['boardShowDue', 'boardShowNotes', 'boardCompact'],
+    fields: [
+      {
+        key: 'boardColumnWidth',
+        label: 'Column width',
+        type: 'range',
+        min: 140,
+        max: 360,
+        step: 10,
+        unit: 'px',
+      },
+      { key: 'boardShowDue', label: 'Show due dates', type: 'switch' },
+      { key: 'boardShowNotes', label: 'Show the first line of notes', type: 'switch' },
+      { key: 'boardCompact', label: 'Compact cards', type: 'switch' },
+    ],
+  },
+  habits: {
+    kind: 'habits',
+    title: 'Habits',
+    group: 'productivity',
+    enabledKey: 'moduleHabits',
+    quick: ['habitsShowStreak', 'habitsShowHeatmap'],
+    fields: [
+      { key: 'habitsDays', label: 'Days shown', type: 'range', min: 5, max: 14, step: 1, unit: ' d' },
+      { key: 'habitsShowStreak', label: 'Show streaks', type: 'switch' },
+      {
+        key: 'habitsShowHeatmap',
+        label: 'Show the history',
+        description: 'Sixteen weeks for the habit you select.',
+        type: 'switch',
+      },
+    ],
+  },
+  calc: {
+    kind: 'calc',
+    title: 'Calculator',
+    group: 'productivity',
+    enabledKey: 'moduleCalc',
+    quick: ['calcShowKeypad', 'calcGrouping'],
+    fields: [
+      { key: 'calcShowKeypad', label: 'Show the keypad', type: 'switch' },
+      {
+        key: 'calcAngle',
+        label: 'Angles',
+        type: 'select',
+        options: [
+          { label: 'Degrees', value: 'deg' },
+          { label: 'Radians', value: 'rad' },
+        ],
+      },
+      { key: 'calcPrecision', label: 'Significant digits', type: 'range', min: 4, max: 16, step: 1 },
+      { key: 'calcGrouping', label: 'Group thousands', type: 'switch' },
+    ],
+  },
+  tray: {
+    kind: 'tray',
+    title: 'Tray',
+    group: 'system',
+    enabledKey: 'moduleTray',
+    quick: ['trayShowLabels', 'trayShowHidden'],
+    fields: [
+      { key: 'trayIconSize', label: 'Icon size', type: 'range', min: 16, max: 40, step: 2, unit: 'px' },
+      {
+        key: 'trayShowLabels',
+        label: 'List with names',
+        description: 'Each icon beside its tooltip, instead of a grid of icons.',
+        type: 'switch',
+      },
+      {
+        key: 'trayShowHidden',
+        label: 'Include hidden icons',
+        description: 'The ones Windows keeps behind the overflow arrow.',
+        type: 'switch',
+      },
+    ],
+  },
+  links: {
+    kind: 'links',
+    title: 'Links',
+    group: 'web',
+    enabledKey: 'moduleLinks',
+    quick: ['linksShowSearch', 'linksShowLabels'],
+    fields: [
+      {
+        key: 'linksEngine',
+        label: 'Search with',
+        description: 'Bangs pick another for one search: !g, !ddg, !yt, !gh, !w, !maps.',
+        type: 'select',
+        options: [
+          { label: 'Google', value: 'google' },
+          { label: 'DuckDuckGo', value: 'duckduckgo' },
+          { label: 'Bing', value: 'bing' },
+          { label: 'Brave', value: 'brave' },
+          { label: 'Startpage', value: 'startpage' },
+          { label: 'Ecosia', value: 'ecosia' },
+          { label: 'Kagi', value: 'kagi' },
+        ],
+      },
+      { key: 'linksShowSearch', label: 'Show the search box', type: 'switch' },
+      { key: 'linksShowLabels', label: 'Show names', type: 'switch' },
+      { key: 'linksTileSize', label: 'Tile size', type: 'range', min: 32, max: 96, step: 4, unit: 'px' },
+    ],
+  },
+  browser: {
+    kind: 'browser',
+    title: 'Browser',
+    group: 'web',
+    enabledKey: 'moduleBrowser',
+    quick: ['browserReader', 'browserShowNav'],
+    fields: [
+      {
+        key: 'browserReader',
+        label: 'Open pages as text',
+        description:
+          'Every page as plain text, read through r.jina.ai. Otherwise a site that refuses to be shown inside another page is shown as a copy: its look, without its scripts.',
+        type: 'switch',
+      },
+      { key: 'browserShowNav', label: 'Show back and forward', type: 'switch' },
+      { key: 'browserZoom', label: 'Page zoom', type: 'range', min: 50, max: 150, step: 10, unit: '%' },
+    ],
+  },
 };
 
 /** Fixed order for anything that lists every module, grouped as the menu is. */
@@ -618,21 +941,33 @@ export const MODULE_ORDER: readonly PanelKind[] = [
   'calendar',
   'worldclock',
   'timer',
+  'alarms',
+  'agenda',
+  'notes',
+  'board',
+  'habits',
+  'calc',
   'sysmon',
+  'perf',
+  'usage',
   'battery',
   'power',
   'quick',
+  'tray',
   'network',
   'bluetooth',
   'media',
   'games',
+  'apps',
   'windows',
   'workspaces',
   'notifications',
   'clipboard',
   'files',
   'trash',
-  'notes',
+  'weather',
+  'links',
+  'browser',
   'chat',
 ];
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { fade } from 'svelte/transition';
   import { config } from '$lib/config.svelte';
+  import { linger, settle } from '$lib/motion';
   import { wallpapers, type WallpaperEntry } from '$lib/wallpapers.svelte';
   import { fileUrl, isVideoFile } from '$lib/assets';
   import type { WallpaperChoice } from '$lib/store.svelte';
@@ -81,8 +81,6 @@
       .join(' ') || 'none',
   );
 
-  const fadeMs = $derived(cfg.animations ? 600 : 0);
-
   // Stop decoding while the display is hidden. This is the single biggest cost
   // the surface can impose, so it is driven by real window geometry rather than
   // a timer.
@@ -119,8 +117,10 @@
 
 <div class="wallpaper" aria-hidden="true">
   {#if active}
+    <!-- A new wallpaper settles in from slightly too close while the old one
+         stays until it is covered, so a change never dips through to black. -->
     {#key active.url}
-      <div class="layer" in:fade={{ duration: fadeMs }} out:fade={{ duration: fadeMs }}>
+      <div class="layer" in:settle={{ duration: 1400 }} out:linger={{ duration: 1400 }}>
         {#if active.isVideo}
           <!-- svelte-ignore a11y_media_has_caption -->
           <video
@@ -175,7 +175,11 @@
     display: block;
   }
 
+  /* The overlay colour eases to a new setting instead of snapping. */
   .tint {
     pointer-events: none;
+    transition:
+      background-color var(--dur-slow) var(--ease),
+      opacity var(--dur-slow) var(--ease);
   }
 </style>

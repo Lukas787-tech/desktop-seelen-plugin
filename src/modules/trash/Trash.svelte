@@ -8,6 +8,14 @@
   $effect(() => trash.acquire());
 
   let confirming = $state(false);
+
+  // A confirmation left armed turns a later, idle click on "Empty" into an
+  // immediate and unrecoverable delete, so it disarms itself after a while.
+  $effect(() => {
+    if (!confirming) return;
+    const timer = setTimeout(() => (confirming = false), 6000);
+    return () => clearTimeout(timer);
+  });
   /** The last failure the host reported, shown until the next attempt. */
   let failure = $state<string | null>(null);
 
@@ -62,8 +70,8 @@
   }
 
   .value {
-    font-size: 28px;
-    font-weight: 200;
+    font-size: calc(28px * var(--text-scale, 1));
+    font-weight: var(--display-weight, 200);
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
@@ -73,7 +81,7 @@
   }
 
   .failed {
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
     line-height: 1.35;
     color: var(--color-red-700, #f77);
     overflow: hidden;

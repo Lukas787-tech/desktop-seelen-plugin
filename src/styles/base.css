@@ -4,7 +4,8 @@
  * Colours come from Seelen's own contrast-adaptive token set (--color-*),
  * which the host injects along with the user's active themes. Using those
  * tokens rather than literal colours is what makes this surface restyle
- * itself when the user switches themes.
+ * itself when the user switches themes - and what lets a colour scheme
+ * (`src/lib/schemes.ts`) recolour every module by redefining that one ramp.
  */
 
 /*
@@ -28,11 +29,10 @@
  * The surface's own tokens.
  *
  * Everything here is a *default*: `src/lib/appearance.ts` overwrites the ones
- * the user can configure on the surface's root element, and the values below
- * are what the palette (which has no such settings) and the offline preview
- * use on their own. Written as a fallback chain rather than duplicated, so
- * there is one definition of what a panel looks like and three ways to reach
- * it.
+ * the user can configure on `body`, and the values below are what the palette
+ * (which has no such settings) and the offline preview use on their own.
+ * Written as a fallback chain rather than duplicated, so there is one
+ * definition of what a panel looks like and three ways to reach it.
  *
  * `--rs-*` is the shell theme's token set. Seelen injects an active theme's
  * shared styles into every widget, this one included, so reading them here is
@@ -58,9 +58,16 @@ body {
   --panel-ground: var(--rs-ground, var(--color-gray-50, #1a1a1a));
   --panel-alpha: 0.72;
   --panel-edge: 38%;
+  --panel-edge-n: 0.38;
   --panel-blur: 18px;
+  --panel-backdrop: blur(var(--panel-blur));
+  --panel-border-width: 1px;
+  --panel-border-style: solid;
   --panel-shadow: var(--shadow-m, 2px 2px 8px rgb(0 0 0 / 0.16));
+  --panel-text-shadow: none;
+  --panel-pad: 12px;
 
+  /* Kept for anything outside this package that composed against them. */
   --panel-bg: color-mix(in oklab, var(--panel-ground) calc(var(--panel-alpha) * 100%), transparent);
   --panel-border: color-mix(in oklab, var(--color-gray-300, #666) var(--panel-edge), transparent);
   --panel-fg: var(--color-gray-900, #eee);
@@ -85,14 +92,25 @@ body {
     --rs-grain,
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E")
   );
-  --panel-texture: none;
+  /* Always two layers; see `.panel` for why the count matters. */
+  --panel-texture: none, none;
 
   /* Typography and spacing, overwritten per surface by `appearance.ts`. */
   --ui-font: var(--rs-font, var(--font-family, 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif));
   --display-font: var(--ui-font);
+  --mono-font: 'Cascadia Code', Consolas, ui-monospace, monospace;
   --ui-size: 14px;
+  --text-scale: 1;
+  --ui-weight: 400;
+  --display-weight: 200;
+  --title-weight: 600;
+  --ui-tracking: normal;
   --density: 1;
+  --round: 1;
   --icon-radius: 10px;
+  --bar-h: 4px;
+  --scrollbar-width: thin;
+  --accent-2: #bb9af7;
 }
 
 html,
@@ -105,6 +123,8 @@ body {
   color: var(--panel-fg);
   font-family: var(--ui-font);
   font-size: var(--ui-size);
+  font-weight: var(--ui-weight);
+  letter-spacing: var(--ui-tracking);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -150,25 +170,142 @@ button {
 }
 
 /*
- * Thin, quiet scrollbars.
+ * Quiet scrollbars, by default.
  *
  * WebView2's default is the full-width Windows bar, which is 17px of chrome
  * inside a panel that is often only 260px wide - it crowds the content and
  * reads as a control the surface does not otherwise have. `scrollbar-width`
  * and `scrollbar-color` are honoured by this runtime, and both are inherited,
- * so declaring them once here reaches every scrolling list.
+ * so declaring them once here reaches every scrolling list. The width is a
+ * setting: thin, hidden entirely (lists still scroll), or the platform's own.
  */
 * {
-  scrollbar-width: thin;
+  scrollbar-width: var(--scrollbar-width);
   scrollbar-color: color-mix(in oklab, var(--color-gray-400, #888) 45%, transparent) transparent;
 }
 
+/*
+ * A panel: the module panels, every menu and every dialog.
+ *
+ * The fill is composed *here*, on the panel, rather than read from a
+ * `--panel-bg` finished on `body`. The difference is who can change it: a
+ * composition resolved on `body` is a fixed colour by the time a panel
+ * inherits it, so a user stylesheet setting `--panel-alpha` on one module
+ * would have done nothing. Composed per element, `[data-module='clock'] {
+ * --panel-alpha: 0 }` makes exactly that panel clear.
+ *
+ * Background layers, top first: the sheen and grain (always two, possibly
+ * `none`), then the fill wash. `background-size` is positional, which is why
+ * the texture is never allowed to be a single `none` - the fill would take the
+ * grain's 120px tile and repeat down the panel.
+ */
 .panel {
-  background-color: var(--panel-bg);
-  background-image: var(--panel-texture);
-  background-size: auto, 120px 120px;
-  border: 1px solid var(--panel-border);
+  --panel-edge-lift: 0%;
+  background-color: color-mix(in oklab, var(--panel-ground) calc(var(--panel-alpha) * 100%), transparent);
+  background-image: var(--panel-texture), none;
+  background-size: auto, 120px 120px, auto;
+  border-width: var(--panel-border-width);
+  border-style: var(--panel-border-style);
+  border-color: color-mix(
+    in oklab,
+    var(--color-gray-300, #666) min(100%, var(--panel-edge) + var(--panel-edge-lift)),
+    transparent
+  );
   border-radius: var(--surface-radius);
-  backdrop-filter: blur(var(--panel-blur));
+  backdrop-filter: var(--panel-backdrop);
   box-shadow: var(--panel-shadow);
+  text-shadow: var(--panel-text-shadow);
+}
+
+/* --------------------------------------------------------------- edges -- */
+
+body[data-border='ink'] .panel {
+  border-color: color-mix(
+    in oklab,
+    var(--color-gray-900, #eee) min(100%, var(--panel-edge) + var(--panel-edge-lift)),
+    transparent
+  );
+}
+
+body[data-border='accent'] .panel {
+  border-color: color-mix(
+    in oklab,
+    var(--accent, #7aa2f7) min(100%, var(--panel-edge) + var(--panel-edge-lift)),
+    transparent
+  );
+}
+
+/*
+ * A gradient edge, from the accent to the second accent and back.
+ *
+ * `border-image` would be one line, and it ignores `border-radius`: every
+ * rounded panel would get square gradient corners. So the border keeps its
+ * width and turns transparent, and a ring is drawn over it instead - a
+ * gradient on a box the size of the border box, with the content box masked
+ * out, which leaves exactly the border's width of it. Menus are left out: they
+ * scroll, and an absolutely positioned ring inside a scroller scrolls away with
+ * the rows.
+ *
+ * The angle is a registered property (`motion.css`) so the Animated border
+ * setting can turn it. Non-inherited, and set on the ring itself: an angle
+ * inherited from `body` would be resolved there, and the animation on the ring
+ * could never reach it.
+ */
+body[data-border='gradient'] :is(.panel.module, .panel.dialog) {
+  border-color: transparent;
+}
+
+body[data-border='gradient'] .panel.dialog {
+  position: relative;
+}
+
+body[data-border='gradient'] :is(.panel.module, .panel.dialog)::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--panel-border-width));
+  z-index: 3;
+  padding: max(1px, var(--panel-border-width));
+  border-radius: inherit;
+  background: linear-gradient(var(--ring-angle, 135deg), var(--accent, #7aa2f7), var(--accent-2), var(--accent, #7aa2f7));
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: calc(0.25 + var(--panel-edge-n) * 0.75);
+  pointer-events: none;
+}
+
+body[data-border='gradient'][data-border-motion='on'] .panel.module::before {
+  animation: fx-ring calc(8s * max(var(--motion, 1), 0.25)) linear infinite;
+}
+
+/* Nothing turns on a surface nobody can see. */
+.covered .panel.module::before {
+  animation-play-state: paused;
+}
+
+/* ------------------------------------------------------------- shadows -- */
+
+body[data-shadow='block'] .panel {
+  box-shadow: 6px 6px 0 0 var(--accent, #7aa2f7);
+}
+
+body[data-shadow='glow'] .panel {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent, #7aa2f7) 22%, transparent),
+    0 0 32px -4px color-mix(in oklab, var(--accent, #7aa2f7) 48%, transparent);
+}
+
+/* --------------------------------------------------------------- fills -- */
+
+body[data-fill='gradient'] .panel {
+  background-image:
+    var(--panel-texture),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-gray-900, #eee) 8%, transparent), transparent 72%);
+}
+
+body[data-fill='accent'] .panel {
+  background-image:
+    var(--panel-texture),
+    linear-gradient(135deg, color-mix(in oklab, var(--accent, #7aa2f7) 26%, transparent), transparent 66%);
 }

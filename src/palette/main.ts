@@ -3,6 +3,7 @@ import { Widget } from '$lib/seelen';
 import { installErrorCapture, writeDiagnostics } from '$lib/diagnostics';
 import Palette from './Palette.svelte';
 import '../styles/base.css';
+import '../styles/motion.css';
 import '../styles/fit.css';
 
 /**

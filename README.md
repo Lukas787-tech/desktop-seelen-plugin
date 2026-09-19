@@ -1,8 +1,10 @@
 # @ralfm/desktop
 
 A custom desktop surface for Windows — a curated icon launcher, a game library, a wallpaper engine
-and nineteen integrated modules (media and audio mixer, clock, calendar, system monitor, open
-windows, notifications, clipboard history, notes and more) plus a command palette.
+and thirty-two integrated modules (media and audio mixer, weather, an agenda with reminders, a kanban
+board, habits, alarms, a calculator, screen time, a performance monitor, an app drawer, the system
+tray, open windows, notifications, clipboard history, notes and more), a command palette, and a
+controller-driven game mode that turns a display of your choosing into a console-style launcher.
 
 It is built as a **Seelen UI third-party widget** rather than a standalone app. Seelen 2.8.2 is
 already installed and already owns the desktop layer, so a separate app would have to fight it for
@@ -18,8 +20,9 @@ Download `SeelenDesktopSurface-Setup-<version>.exe` from
 1. **Checks for Seelen UI 2.8 or newer** - in the registry, in `Program Files`, or as the Microsoft
    Store build - and offers to install or update it with winget (`Seelen.SeelenUI`) when it is
    missing or too old.
-2. **Installs the desktop surface, the command palette and the theme** into Seelen's own resource
-   folders, where Seelen finds them at every start, and loads them into the running Seelen.
+2. **Installs the desktop surface, the command palette, the game overlay and the theme** into
+   Seelen's own resource folders, where Seelen finds them at every start, and loads them into the
+   running Seelen.
 3. **Switches them on** in Seelen's settings. Seelen holds its settings in memory, so when something
    actually needs switching on it asks to restart Seelen UI once, then checks the restarted Seelen
    kept the change; a copy of the old settings is left beside them as
@@ -50,6 +53,7 @@ an API key the first time it opens.
 | --- | --- | --- | --- |
 | `@ralfm/desktop` | Widget, `Desktop` preset | `ReplicaByMonitor` | The surface: wallpaper, icon grid, module panels. One per display. |
 | `@ralfm/palette` | Widget, `Popup` preset | `Single`, lazy | Command palette on `Win+Alt+Space`. Costs nothing until summoned. |
+| `@ralfm/overlay` | Widget, `Overlay` preset | `Single`, lazy | The in-game overlay on `Win+Alt+G`. Exists so that hotkey is unmistakable; see [Game mode](#game-mode). |
 | `@ralfm/surface` | Theme | — | Dresses Seelen's *own* shell in the surface's chrome. See [The theme](#the-theme). |
 
 - **Icon launcher** — starts empty and curated. Add applications from the Start Menu index, files and
@@ -67,14 +71,25 @@ an API key the first time it opens.
   library, which is how a Game Pass title with no shortcut is found. It lays them out as a grid, a
   shelf or a list with generated cover art, store badges, a live marker on whatever is running and
   the play time it measured. See [Game library](#game-library).
-- **Nineteen modules**, each a draggable panel, each shown or hidden per display:
+- **Game mode** — `Win+Shift+G` turns one display (you pick which) into a full-screen, console-style
+  launcher driven by a controller: shelves of icon tiles, a details pane, an on-screen keyboard, a
+  section for adding games from the sofa, a Running section to switch back to a game, and Power, all
+  navigated with a d-pad and four buttons. Each game appears exactly once however many ways detection
+  found it, and a model can write the one-line description no store hands over. Bindings are named by
+  position, so one set is right on an Xbox pad, a DualSense and a Switch Pro alike. `Win+Alt+G` brings
+  up an **overlay** over whatever is running — the game, the clock, and the way back to the launcher.
+  A controller can also drive the ordinary desktop, turning buttons into keys, clicks and scrolling
+  and the right stick into a pointer. See [Game mode](#game-mode).
+- **Thirty-two modules**, each a draggable panel, each shown or hidden per display:
 
   | Group | Modules |
   | --- | --- |
-  | Time | **Clock**; **Calendar** (month grid, ISO week numbers); **World clock** (any IANA zones, with the offset and day difference from here); **Timer** (focus/break phases, with a chime) |
-  | System | **System monitor** (CPU, memory, disks, network); **Battery** (charge, draw, health, power mode); **Power** (lock, sign out, sleep, hibernate, restart, shut down — the last three confirm); **Quick settings** (per-monitor brightness, Wi-Fi and bluetooth radios, focus assist) |
+  | Time | **Clock**; **Calendar** (month grid, ISO week numbers, and the Agenda's events as dots - double-click a day to add one); **World clock** (any IANA zones, with the offset and day difference from here); **Timer** (focus/break phases, with a chime); **Alarms** (any number of named timers, a stopwatch with laps, and repeating alarms with snooze) |
+  | Productivity | **Agenda** (events and reminders, typed the way you would say them: `Dentist fri 14:30 remind 15m`); **Notes/todo**; **Board** (a kanban: columns, cards dragged between them, labels, due dates); **Habits** (daily or n-a-week habits, streaks, sixteen weeks of history); **Calculator** (live results, variables, units and bases: `5 km to mi`, `255 to hex`) |
+  | System | **System monitor** (CPU, memory, disks, network); **Performance** (graphs for CPU, memory, disk and network, every core, per-disk throughput, per-adapter rates); **Screen time** (time per application per day, a week chart, away detection); **Battery** (charge, draw, health, power mode); **Power** (lock, sign out, sleep, hibernate, restart, shut down — the last three confirm); **Quick settings** (per-monitor brightness, Wi-Fi and bluetooth radios, focus assist); **Tray** (the notification-area icons, clickable) |
   | Devices | **Network** (internet state, local address, a Wi-Fi scan you can join from, adapters); **Bluetooth** (paired and nearby devices, connect, disconnect, forget) |
-  | Desktop | **Media**; **Games** (a detected library, with play time and cover art); **Open windows** (click to bring a window back - minimised or not - middle-click to close, group by app, this display only); **Workspaces** (Seelen's per-monitor virtual desktops: switch, add, rename, remove); **Notifications** (dismiss, clear, focus assist); **Clipboard history** (copy or paste an entry back, with image previews); **Files** (a small explorer over a known folder: breadcrumbs, subfolders, a filter, list or tiles, open or pin to the desktop); **Recycle bin**; **Notes/todo**; **Assistant** (an agent that can use this PC and the web, local model first; see [The assistant](#the-assistant)) |
+  | Desktop | **Media**; **Games** (a detected library, with play time and cover art); **Apps** (a searchable app drawer with favourites and recently opened); **Open windows** (click to bring a window back - minimised or not - middle-click to close, group by app, this display only); **Workspaces** (Seelen's per-monitor virtual desktops: switch, add, rename, remove); **Notifications** (dismiss, clear, focus assist); **Clipboard history** (copy or paste an entry back, with image previews); **Files** (a small explorer over a known folder: breadcrumbs, subfolders, a filter, list or tiles, open or pin to the desktop); **Recycle bin** |
+  | Web | **Weather** (Open-Meteo: now, the next 24 hours, up to two weeks); **Links** (search with bangs such as `!yt` and `!gh`, and bookmark tiles); **Browser** (a page in a panel, with back, forward and search; sites that refuse to be framed are shown as a copy - their look, without their scripts - or open in a chromeless Edge window); **Assistant** (an agent that can use this PC and the web, local model first; see [The assistant](#the-assistant)) |
 
   Only the first four — clock, media, system monitor and notes — are on to begin with. The rest are
   one click away in the surface's `Modules` menu, and cost nothing at all while they are off: a
@@ -163,6 +178,269 @@ as a square, box art or a wide capsule; generated gradient art, the app icon, or
 or a cover image you choose per game; titles always, on hover, or never; store badges, running
 markers and play time on or off; ordered by recent, most played, name or store, favourites first,
 and optionally grouped by store.
+
+### Game mode
+
+One display's desktop, turned into a console launcher: full screen, big tiles, driven by a
+controller from across a room. It is the same surface underneath — the same wallpaper, theme, fonts,
+colour scheme and panel material — so it reads as this desktop at ten feet rather than as a second
+application pretending to be one. Every other display carries on as a desktop.
+
+**Which display is a setting, and only one of them can be it.** `gameModeDisplay` holds a monitor id
+and is deliberately *not* `allowSetByMonitor`: every replica of the surface runs the same code and
+asks itself whether it is the launcher, and a per-display override is precisely how two of them
+would come to answer yes. Blank means the primary display. The desktop's own `Game mode` menu lists
+the displays by name and `Open game mode here` moves the setting to the display you asked from, so
+the id is never something you have to copy by hand.
+
+**It stays on the desktop layer.** That was a choice, not a limitation: game mode *is* the desktop of
+that display, revealed by minimising what is over it exactly as the desktop always is, and a game
+launched from it covers it like any other window. A topmost takeover would have meant a launcher
+floating over a running game.
+
+**Opening it**, and the awkward fact underneath every hotkey here. `Win+Shift+G` by default, from
+the desktop's right-click menu, from the command palette on `Win+Alt+Space`, from the overlay, or
+automatically at start-up.
+
+The awkward fact is that a Seelen shortcut runs a *CLI command*, the only CLI command that reaches a
+widget is `widget trigger <id>`, and it takes no arguments. Two shortcuts declared by one widget
+therefore arrive as the same event carrying nothing that says which was pressed. Three answers are
+used here, in order of how sure each one is:
+
+- **A different widget is a different trigger.** That is the whole reason `@ralfm/overlay` is its own
+  resource rather than a mode of the palette: its hotkey cannot be confused with anything, because
+  the trigger is addressed elsewhere. If you want a second global hotkey that is certain, this is the
+  shape it has to take.
+- **`customArgs` says which.** `TriggerWidget` carries a free-form `customArgs`, so the palette and
+  the overlay send `{ action: 'game-mode' }`; the trigger reaches every replica and only the one that
+  owns the launcher acts on it. This is exact — but only something calling the command can use it, so
+  it is no help to a keyboard shortcut.
+- **The keyboard still knows.** For the two shortcuts this widget does declare — `Win+Shift+D` for
+  the desktop and `Win+Shift+G` for game mode — the trigger arrives a millisecond or two after the
+  key went down, while it is still held. So `get_key_state` is asked which of the two combinations is
+  *currently* down (`src/lib/hotkeys.ts`, tested). It is a guess about timing and it is treated as
+  one: nothing down, both down, or a host that cannot answer all mean "unclear", and unclear does
+  what this widget has always done — shows the desktop. Rebind either of them, or the overlay's, in
+  Seelen's own shortcuts page; the keys are read back from there, so a rebind is understood.
+
+The palette and the overlay are also the two places a summon can come from while another window is in
+front, because they hold the keyboard and the desktop surface does not.
+
+**Why it asks for the keyboard, and the two things that follow from it.** `navigator.getGamepads()`
+reports nothing at all unless the document has focus — that is Chromium's rule — and a Desktop-preset
+widget carries `WS_EX_NOACTIVATE`, so it is never focused by being clicked. Game mode therefore calls
+`Widget.self.focus()` when it opens, the same `request_focus` the text fields use (see
+[Alt+Tab is icons](#alttab-is-icons) for why that call exists at all). Two consequences are worth
+stating plainly rather than discovering:
+
+- **A controller cannot summon anything while a game is in front.** Nothing in this package can read
+  a button press it is not focused for. `Keep the keyboard` re-takes focus when something else grabs
+  it while the launcher is open; turn it off and alt-tabbing away leaves the launcher up but idle.
+- **Nothing here types into another application.** Synthesising input for a window you do not own
+  means `SendInput`, a Win32 call; the host's command surface has `Run`, `OpenFile` and focus, and
+  nothing that types. So a game's own keyboard controls are outside what this does, and the settings
+  say so where the switch is rather than letting the name imply otherwise.
+
+**Navigation is geometric, not a tab order.** A section rail, a shelf of covers and a column of
+settings share one screen, and "down" from a section tab has to mean the shelf under it — not the
+next element in the document. So every control registers its element (`use:navItem`) and a direction
+is answered by measuring: of everything whose *centre* lies ahead, prefer what overlaps the current
+control across the direction of travel, then the nearest. Centres rather than edges, because a tall
+panel beside a short one overlaps it and an edge test would call the neighbour "not ahead" and refuse
+to move at all. It is pure — rectangles in, an id out — so `npm test` covers the awkward cases
+without a browser. Arrow keys, Enter, Escape and Tab do the same things, because setting the thing up
+at a desk should not need a controller.
+
+**Buttons are named by position, never by letter.** South, east, west, north — south being the button
+under your thumb, whatever it happens to be lettered. Index 0 of the standard mapping is A on an Xbox
+pad, Cross on a DualSense and B on a Switch Pro, so one set of bindings is correct on all three and
+only the glyph drawn in the hints changes. The family is read from the pad's id, vendor id first
+(`054c`, `057e`, `045e`) because that is the one part of that free-text string that is a fact. With
+nothing plugged in the hints are drawn as Xbox rather than as `1 2 3 4`: something has to be shown
+before a controller arrives, and a familiar wrong guess beats "press 1 to play".
+
+**The pad is polled, and tuned.** The Gamepad API has no press event — a pad is a snapshot, and a
+press is the difference between two of them — so there is one `requestAnimationFrame` loop, started
+on the first acquire and stopped with the last release. While game mode is closed nothing runs at
+all. Dead zones are radial rather than per-axis, or a stick nudged diagonally would register while
+the same nudge straight up would not; what is left past the dead zone is rescaled across the full
+range, so a stick just off centre moves *slowly* instead of jumping to a third of full speed. A held
+direction repeats after a delay and then accelerates towards a floor, and the repeats are counted
+from when the hold started rather than driven by a timer — a frame that ran long then fires the steps
+it owes instead of losing them. Dead zone, response curve, step point, delay, interval, floor,
+trigger pull and rumble are all sliders, and the settings dialog shows a live read-out of the pad
+beside them, because none of those can be judged except by moving the thing and watching.
+
+**Seven sections**, stepped through with the shoulder buttons: **Home** (a hero for the selected game,
+then Continue playing, Favourites and everything), **Library** (the lot, as scrolling shelves, a
+wrapped grid, or a wall of large covers), **Add games**, **Running** (games and windows, to switch
+back to), **Apps** (the desktop's own icons as a grid), **Settings**, and **Power**. The backdrop is your own wallpaper, blurred
+and dimmed — or the selected game's cover where you have chosen one. It used to mix a gradient from
+the game's name when there was no cover, which meant the whole screen changed colour on every step
+along a shelf; that is gone for the same reason the tiles are plain.
+
+**One surface per tile, and one tile per game.** Every tile is the same material the module panels
+on the desktop are made of - the scheme's own ground at the user's own opacity, the scheme's own
+border - with the application's icon on it and the title underneath. There is deliberately no colour
+per game: a shelf of forty differently tinted boxes is louder than the list it is drawing, and the
+icons already tell them apart. The accent appears exactly once on the screen, around the selected
+tile, and it is the accent you set rather than a colour of this module's own - which is also true of
+the hero's Play button, the on-screen keyboard and the settings rows. Unselected tiles step back on
+opacity rather than a brightness filter, because a filter would darken the wallpaper showing through
+them too.
+
+**A game appears once, whichever of its names each copy arrived under.** Two different repeats had
+to be dealt with, and both are in one pure place (`gamerows.ts`, tested).
+
+The first is one game as two entries. Detection finds Counter-Strike 2 as a Start Menu shortcut
+(`steam://rungameid/730`), as a running process (`cs2.exe`) and as whatever an older scan wrote
+(`steam://run/730`), and no two of those strings are equal — so identifying an entry by *one* key,
+however carefully chosen, leaves the other copies standing. So an entry is not reduced to one key: it
+carries every name it answers to — its executable, its package id, its launch target, the store and
+id inside that target, and its own title folded to letters and numbers — and two entries sharing any
+one of them are one game. That makes it a union rather than a lookup, which is why it is a union-find
+and not a `Set` of first sightings: A can match B on an executable and B match C on a title, and all
+three are one tile. Launcher bootstrappers are excluded by name, or every Riot game would be one
+game; `CLIENT_EXES` is already the list detection rejects clients by, so it is the list here too.
+
+The second is one game in three rows at once — Continue playing *and* Favourites *and* everything —
+because each row was filtered from the whole library. The rows are now filled in order and each one
+removes what it took, so the last row is what is left rather than everything again, and where nothing
+was played and nothing is starred there is one honest row called All games instead of three saying
+the same thing.
+
+Hiding duplicates is not fixing them, though: the extra entries still collect their own play time and
+are still what the Games panel offers to edit. So the same grouping is offered as a real edit — a
+**Merge duplicates** chip on the Games panel and a button in game mode's **Add games** section, which
+fold the library on disk. The survivor of a group is the entry *you* have touched, a rename, a cover,
+a starred favourite or a store you picked by hand, because that is the one thing a rescan cannot
+rebuild; the rest is merged into it, and play time is taken as the largest of the copies rather than
+summed, since two entries for one game are matched by the same window and both counted the same
+hours.
+
+**Adding games is a section, not a dialog.** The desktop's Games panel has a file picker behind a
+`+`, which is no use from a sofa, so game mode has its own **Add games**: what a scan found and was
+not sure enough about to add by itself, with Add and Not a game beside each; the whole Start Menu
+index as a grid, minus everything the library already points at, searchable with the on-screen
+keyboard; and buttons to scan this machine again and to merge the duplicates it left behind. It holds
+the installed-application index only while that section is open, because the launcher is meant to
+cost nothing while a game is running.
+
+**No icon is drawn bigger than it is.** An application's icon is whatever was extracted from its
+executable, which is a 256px PNG for some and 32 pixels for plenty of others — a `.url` shortcut
+never carried more — and stretching 32 pixels across a tile the size of a playing card is the blur
+that reads as a broken image rather than as a small icon. There is nothing bigger to ask the host
+for, so the element publishes its own pixel size as `--natural` (`src/lib/iconsize.ts`) and the
+stylesheet takes the smaller of that and the room available. A small icon then sits crisply in the
+middle of its tile. Vectors are exempt, because they are right at any size and their `naturalWidth`
+is a default rather than a measurement.
+
+**One surface, one radius, one idea of "selected".** Every surface on this screen had been composed
+separately — four greys at five strengths, three radii, and three different ideas of what the pad
+being on something looks like (a ring here, a filled row there, an inset outline in the third place)
+— and a screen read from a sofa shows that kind of drift far more than a panel read at a desk does.
+There is now one small set of custom properties at the top of `GameMode.svelte`, all derived from
+your own theme rather than chosen here, and everything below uses them: `--gm-surface` and
+`--gm-surface-strong` for the two weights of panel material, `--gm-edge` for the border, `--gm-radius`
+and `--gm-pill` for shape, and `--gm-wash` over `--gm-ring` for the one idea of where the pad is — an
+accent outline over a faint wash of the accent, never a fill, which would need its own text colour
+picked per scheme.
+
+**What a game is, a model can say.** Detection finds names and paths; no store tells a widget that
+Factorio is a factory builder. So the library can be handed to a model - Gemini by default, because
+its free tier is the one most people already have and it answers thirty titles in a couple of
+seconds - which returns one line each, and the answers are kept on disk so it is asked once. It
+borrows the assistant's own services, keys and privacy setting: a "local only" assistant refuses a
+cloud description too. The prompt says an empty string is the correct answer for a title it does not
+recognise, and an entry that comes back empty is stored as nothing rather than as a guess, so a
+mis-detected `setup.exe` gets no description instead of an invented one. Answers are written a batch
+at a time, so a failure on the fourth request does not throw away the three that worked, and the
+settings panel says how many are written, how many are left and which service and model answered.
+
+**Settings are editable from the sofa.** The Settings section draws each one as a row where left and
+right change the *value* rather than moving off it, which is the one place four directions have to do
+double duty; a range with more than forty steps moves in coarser jumps, or the pointer-speed slider
+would take fifty-six presses to cross. The full dialog on the desktop has the rest: the display
+picker, the per-action binding editor, and the button-to-key map.
+
+**The on-screen keyboard writes the value, it does not press keys.** A `KeyboardEvent` built in
+script carries `isTrusted: false`, and the browser performs no default action for an untrusted
+event — every handler on the page runs, but nothing is typed. So a dispatched "s" would reach the
+search box's `oninput` and still leave it empty. Setting the value is the only thing that types.
+
+**The overlay is a widget of its own, and that is the point.** `@ralfm/overlay` is an
+`Overlay`-preset widget that comes up on `Win+Alt+G` over whatever is running: the game you are in
+with its store and play time, the clock, and a column of things to do — back to the game, open game
+mode, show the desktop, close the game, switch to another window, lock. It holds the keyboard, which
+is what lets a controller drive it, and it is *reachable* while a game is in front, which the desktop
+surface is not. What it costs while nobody has summoned it is nothing: it is lazy, so the webview is
+not created until the shortcut fires, and the preset hides it again on focus loss.
+
+Two things it is honest about. A controller cannot summon it — a global shortcut is a keyboard
+shortcut, and nothing in this package can read a button press it is not focused for. And an
+exclusive-fullscreen game may cover it; a borderless one will not. Its navigation is a single column
+walked with an index rather than the launcher's spatial navigator, because a list of short rows is
+not a screen where "down" has to be answered by measuring.
+
+**Driving the ordinary desktop** is the other half, and off by default. Switched on, a controller
+turns into key presses, clicks and scrolling for the surface itself, and the right stick becomes a
+drawn pointer — which makes the notes panel, the calculator, the assistant and every other module
+usable from the sofa without writing a controller path into each of them. The same `isTrusted` rule
+shapes it: keys are dispatched and reach the surface's own handlers, but **Tab is walked by hand**
+(nothing else would move focus), **scrolling is performed** on the element under the pointer, and
+**clicks call `click()`** rather than hoping a dispatched `mousedown` is honoured. Five ready-made
+profiles, plus `button=key` overrides applied over whichever one is chosen. It is asked for the
+keyboard at exactly one moment: when "show desktop" lifts this surface over Explorer's, which is when
+the user has plainly said they want the desktop and not what is over it. Anything more would be
+taking the keyboard out of whatever they were typing in.
+
+**While the launcher is up the icons and panels are unmounted, not hidden.** Every module acquires
+its host subscriptions on mount, so that is what makes game mode cost nothing but itself while a game
+is running. The wallpaper layer stays, because the launcher can use it as a backdrop.
+
+### The larger modules
+
+The eleven modules added after the first twenty share a few rules, all in `src/lib/`:
+
+- **Data both displays edit is merged, not overwritten.** A board, an agenda, habits, links, alarms
+  and the Apps module's favourites are kept by `synced.svelte.ts`: every item carries an id and an
+  `updatedAt`, a write re-reads the file and keeps the newer copy of each item, and a removal is a
+  tombstone that only beats edits made before it (`merge.ts`, tested). A card moved on one display
+  and another card moved on the other both survive. There is no file watch in the host API, so a
+  panel re-reads when the pointer comes onto it - exactly when the other display's change is about
+  to matter - and on every write.
+- **Only one display rings.** Alarms, the Agenda's reminders and Screen time's counting run on
+  whichever replica holds a lease (`lease.svelte.ts`): a small file naming its holder, renewed every
+  20 seconds and free for the taking after a minute. That works whichever display, or both, shows
+  the panel - the primary display does not have to.
+- **Order is a number per item.** Moving a card, a link or a habit changes that one item's order
+  (the midpoint of its new neighbours), so two moves on two displays merge rather than one undoing
+  the other.
+- **Pure parts are tested.** The calculator's parser and unit tables (`calc.ts`), the agenda's repeat
+  expansion and quick-add reader (`agenda.ts`), timer and alarm arithmetic (`alarmtime.ts`), streaks
+  (`habits.ts`), search bangs and address detection (`links.ts`), the merge, and panel placement
+  (`layout.ts`) all run under `npm test`.
+
+What each one costs, since nothing on the surface polls without a reason:
+
+| Module | Talks to | How often |
+| --- | --- | --- |
+| Weather | Open-Meteo (no key; it answers any origin) | a forecast every 30 minutes while shown; the last one is kept in `weather.json`, so a restart paints it at once |
+| Agenda | `agenda.json` | one timer, set for the next reminder |
+| Alarms | `alarms.json` | one timer, set for the next deadline; the panel redraws once a second while a timer runs, and every frame only for a running stopwatch that is on screen |
+| Performance | the host's system events | nothing of its own - the same stream the System panel reads |
+| Screen time | `global-focus-changed`, and the pointer position | the pointer once every 30 seconds, to tell "away" from "reading"; a fullscreen window never counts as away |
+| Apps | the Start Menu index | held while shown; the full list renders in chunks as it is scrolled |
+| Tray | the host's tray events | none |
+| Links | favicons from `icons.duckduckgo.com` | once per bookmark; a letter tile if that is blocked |
+| Browser | the pages you open, in a sandboxed frame; copies of sites that refuse framing, searches (DuckDuckGo's HTML page) and text views through `r.jina.ai` | nothing until something is opened; each display's history is kept in `browser-<display>.json` |
+| Board, Habits, Calculator | their own JSON files | none |
+
+**Placing a module.** The later modules' default positions are laid out for a 3440x1440 display.
+Switching one on where it would land on top of another panel moves it to the first free space
+instead, and a panel that has ended up off the display - after a resolution change, say - is
+brought back on (`layout.ts`, `Surface.svelte`). A layout arranged with overlaps on purpose is left
+alone; only the switch-on is moved.
 
 ### The assistant
 
@@ -313,18 +591,127 @@ the whole file: dragging a slider produces one or two writes, not one per frame.
 ### Making it yours
 
 The surface's appearance is driven from one place, `src/lib/appearance.ts`, which turns the
-settings into the dozen custom properties every stylesheet in the package reads. Three groups of
-them:
+settings into the custom properties and `body` attributes every stylesheet in the package reads.
+Right-click the desktop for **Appearance...**, and for **Look** and **Colour scheme** menus that
+switch in one click. The dialog holds *everything* about how the desktop and the shell look, so
+Seelen's own Settings window is never needed for it:
+
+- **Desktop** — Looks, Colour, Panels, Text and fonts, Controls, Icons and layout, Wallpaper
+  (including the picker and the slideshow) and Motion.
+- **Dock and start menu** — whether the Desktop Surface theme is on, the icon packs, and every one of
+  the theme's own settings: preset and accent, glass, shape, typography, motion, the dock's
+  magnification and lift, the start button's icon, finish, size, glow and hover, and the start
+  menu's layout, position, size, tiles and entrance. Settings the desktop already sends to the theme
+  are shown only while **Dress the shell like the desktop** is off, so an edit there is never
+  overwritten by the next desktop change. `npm test` holds this table to the theme's `metadata.yml`
+  and fails if the theme gains a setting the tab does not offer.
+- **Custom CSS** and **Share and reset** — the exported appearance carries the shell's settings too.
+
+Every font field is a picker of the fonts installed on this PC, each drawn in its own face, from the
+same host list Seelen's own picker uses. The same settings remain in Seelen's Settings window, where
+the old Appearance group is now Typography, Colour, Panels, Controls and icons, Motion and Advanced.
 
 | | |
 | --- | --- |
-| **Typography** | Interface font and a separate **display font** for the clock, the timer and panel titles; a base text size everything else is a multiple of; and panel titles as small caps, plain, or hidden entirely. Both fonts use Seelen's native font picker, and an empty one inherits whatever the active theme sets. |
-| **Material** | Panel opacity, blur, edge strength, corner radius, and a shadow from none to deep. **Frosted texture** adds the sheen and grain the shell theme uses, so a module panel and a dock read as the same pane of glass rather than two different tints. |
-| **Colour and density** | A tint hue and strength of your own, an icon corner radius, an accent, and a **density** of compact, cosy or roomy. |
+| **Looks** | Twelve whole appearances: Glass (the default), Hyprland, Terminal, Nord Minimal, Retro, Neo Brutal, Synthwave, Paper, Wireframe, Rosé, Dracula Tabs and Forest. A look is not a mode — it writes ordinary settings, so every slider still does what it says afterwards, and a look you have tuned is simply your own appearance. Text size and motion are left alone: those are about the person, not the desktop. |
+| **Colour** | Sixteen **colour schemes** — Catppuccin Mocha and Latte, Nord, Gruvbox Dark and Light, Dracula, Tokyo Night, Rosé Pine and Dawn, Everforest, Kanagawa, One Dark, Solarized Dark and Light, Monokai, Synthwave '84 — or **custom colours** mixed from one ground and one ink, or the Seelen theme's palette as before. Two accents, and a tint hue and strength on top of any of them. |
+| **Panels** | Opacity, blur and **backdrop saturation**; a flat, lit or accent-washed fill; the frosted texture; corner radius and inner padding; edge width, style (solid, dashed, dotted, double, groove, ridge, inset, outset) and colour (neutral, ink, accent, or a **gradient** that can turn slowly round the panel); shadows from none to deep, a hard offset, an accent block or an accent glow; and the pointer light. |
+| **Text** | Interface, display and **monospace** fonts, each previewed in its own face; a base size that now really does scale every label on the surface; text weight, big-number weight, letter spacing and a text shadow; titles in small caps, plain, lowercase or hidden, decorated with `[ brackets ]`, an underline, a tab, a title bar or an accent dot, aligned left, centre or right, at any weight. |
+| **Controls** | One **control shape**, square to pill, for every button, field, chip, switch and meter; density; meter thickness and style (solid, gradient, striped, glowing); thin, hidden or native scrollbars; icon corners, and icon labels shadowed, on a pill or plain. |
+| **Motion** | Animations on or off, their **length**, the list stagger, and how panels arrive — rise, fade, zoom, drop, slide, into focus, or not at all. Length and stagger go to the shell theme too. |
+| **CSS** | A stylesheet of your own, previewed as you type. See below. |
+| **Share** | The whole appearance as JSON, for another PC or a dotfiles repo, and an importer that applies what it recognises and names what it left out. |
 
-Density is one multiplier rather than three sets of measurements — every pad and gap in
-`modules.css` is `calc(4px * var(--density))` — so a row cannot fall out of step with the list
-around it the way a second hand-written set eventually would.
+Density, corner shape and text size are each one multiplier rather than sets of measurements —
+every pad is `calc(4px * var(--density))`, every control radius `calc(7px * var(--round))`, every
+fixed text size `calc(11px * var(--text-scale))` — so a row cannot fall out of step with the list
+around it the way a second hand-written set eventually would. At the defaults all three are `1`,
+and the surface renders exactly as it did before they existed.
+
+`npm test` holds the settings' three declarations together: every default in `metadata.yml` must
+equal `DEFAULT_CONFIG`, every field in the Appearance dialog must match its `metadata.yml` type,
+range and options, and every value a look writes must be one its setting accepts.
+
+#### Colour schemes remap the ramp
+
+Every stylesheet here already paints in Seelen's contrast-adaptive `--color-gray-*` scale — `gray-50`
+the ground, `gray-900` the ink, and the hundred-odd hovers and tracks in between `color-mix`es of
+`gray-300`. A scheme that brought tokens of its own would have to be taught to every one of those
+declarations, in forty files. So `src/lib/schemes.ts` *redefines the ramp* on `body` instead, from a
+base16-style palette — three grounds, a comment tone, a dim and a full ink, with the steps between
+mixed in OKLab — plus the named hues the modules use for state. Every module is recoloured by a
+change it never sees, which is how a base16 theme reaches every program on a Linux desktop. A light
+scheme flips `color-scheme` too, so native controls follow.
+
+A scheme outranks **Follow the active theme**. The theme's ground is itself a relative colour of
+`gray-50`, so following it while a scheme redefines that ramp would rotate the scheme's ground to the
+preset's hue — a Nord that is not Nord.
+
+#### Your own CSS
+
+**Appearance → CSS** takes a stylesheet, applied after everything the package ships and kept last in
+the document as the host injects theme styles. The hooks are stable, and listed in the dialog:
+
+- `.panel.module[data-module='clock']` — one module's panel, with `header h2` and `.body` inside;
+  `.panel.menu`, `.panel.dialog` and `.icon` for the rest.
+- `.m-row`, `.m-btn`, `.m-chip`, `.m-tabs`, `.m-bar`, `.m-switch`, `.m-stat` — the shared controls.
+- `body[data-scheme]`, `[data-border]`, `[data-shadow]`, `[data-fill]`, `[data-bar]`, `[data-shape]`,
+  `[data-labels]`, `[data-motion]` — each setting's current value, to style for one look only.
+- `--accent`, `--accent-2`, `--panel-ground`, `--panel-alpha`, `--panel-backdrop`, `--surface-radius`,
+  `--panel-pad`, `--round`, `--density`, `--text-scale`, `--bar-h`, the three fonts and the grey ramp.
+
+A panel's fill, edge, glow and meters are composed **on each element** rather than finished on `body`,
+and that is what makes a per-module rule work: `[data-module='media'] { --accent: #f38ba8 }` recolours
+that panel's meters, switches, glow and gradient edge and nothing else. The settings themselves are
+written inline on `body`, so overriding a token *there* needs `!important`; on any element inside it
+does not.
+
+```css
+/* The clock floats on the wallpaper; media and system each get their own accent. */
+body .panel[data-module='clock'] {
+  --panel-alpha: 0;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+[data-module='media'] { --accent: #f38ba8; }
+[data-module='sysmon'] { --accent: #a6e3a1; }
+```
+
+The dialog's chips insert starting points like these. The CSS setting itself is a plain string in
+the widget's settings, so it travels with **Share** and with a per-display override like any other.
+
+#### Presets, and the AI designer
+
+**Looks and presets** holds 48 built-in looks — other desktops (Fluent, Cupertino, Material You,
+Adwaita, Breeze, Classic 95), characters (Matrix, Amber CRT, Cyberpunk, Vaporwave, E-Ink, OLED Black,
+High Contrast, Blueprint, Game Boy, Concrete, Black and Gold), moods (Sakura, Deep Ocean, Golden Hour,
+Coffee House, Lavender Fields, Mint, Midnight Forest, Nordic Light, Ink Wash) and scheme classics —
+searchable, and filterable to dark or light. There are 36 colour schemes behind them. **Save current
+look** keeps your own, desktop and shell together, in `appearance-presets.json` in the widget's data
+folder; saved presets head the desktop's **Look** menu too.
+
+**AI designer** turns a description into a design. Say "a rainy café in Tokyo at night" or "Windows 95
+but pastel", and a model chooses the colour scheme or custom colours, panels, edges, shadows, fonts,
+title treatment, meters, motion, and — unless you untick it — the dock and start menu. The design is
+applied at once, because the desktop is the only preview worth having; everything it changed was
+snapshotted first, so **Undo** puts back exactly what was there. **Adjust this** sends the current
+design back with a change ("warmer, less glow"), and **Save as preset** keeps it.
+
+It uses the assistant's services and keys, so nothing needs setting up twice, and the assistant's
+"local only" privacy setting applies to it too. Free ways to run it: a Gemini key from
+aistudio.google.com/apikey (the default), a Groq key, an OpenRouter model ending in `:free`, or Ollama
+on this PC. Each is asked for JSON in the way it supports (`responseMimeType`, `format`,
+`response_format`).
+
+What comes back is not trusted. `src/lib/vibe.ts` coerces every value against the same declarations the
+dialog's own controls use — an option must exist, a number is clamped to the slider's range and snapped
+to its step, a colour must be hex, a font must be installed — and anything that cannot be made valid is
+dropped and listed rather than written. Settings about how you use the desktop rather than how it
+looks (text size, animations on or off, layout locking, the wallpaper engine) are never offered to it,
+and neither are shell settings the desktop is already sending to the theme. `npm test` checks the
+catalogue, the prompt and the coercion. Sent to the service: your words, the setting list with allowed
+values, your installed font names and, for an adjustment, the current values — nothing else.
 
 #### Following the active theme
 
@@ -387,10 +774,31 @@ off/on re-applying, and the second monitor replica finding the work already done
 keeps the two from racing over the settings file for no gain.
 
 **Shape travels out, colour travels in, and the two never meet.** Font, text size, density, corner
-radius, blur, edge strength, the frosted texture and animations are mirrored into the theme; colour
-is not, because
-`followTheme` already brings the theme's palette the other way and syncing both directions would be
-a loop - the widget writing back the accent the theme just gave it, forever. Panel and overlay
+radius, blur, edge strength, the frosted texture, animation length and list stagger are mirrored into
+the theme; the theme's *own* palette is not, because `followTheme` already brings it the other way
+and syncing both directions would be a loop - the widget writing back the accent the theme just gave
+it, forever.
+
+A **colour scheme** is the exception, and the reason it is safe is the same rule read the other way:
+while a scheme is chosen the surface is not reading the theme's colours at all, so there is nothing
+to loop. `shellSchemeVars` in `src/lib/schemes.ts` writes it into the theme as `--rs-scheme`
+(`none`, `ramp` for custom colours, `full` for a named scheme) and fifteen `--rs-scheme-*` colours,
+and `shared/tokens.css` rebuilds Seelen's grey ramp, the state hues and the preset's accent from them
+on every shell widget's `body` - the same trick the surface plays on its own. Three details, each
+checked in a browser against the theme's real `tokens.css`: the rules sit inside a style query on the
+registered `--rs-scheme` string, so a session that has not registered the new variables matches
+nothing rather than a ramp of unset colours; they skip `body[data-scheme]`, which is the Desktop
+widget's own document, so a scheme chosen on one display cannot paint the other display's surface;
+and they outrank the preset, so a Nord is not tinted toward Midnight. With the scheme back on
+**Follow Seelen theme** every one of those variables is written as `none` or `transparent` and the
+preset takes over again.
+
+The measured glass colour had to learn about light schemes for this. It used to parse
+`getComputedStyle` for its ground, and a `color-mix` serialises as `oklab(0.98 …)` rather than
+`rgb(…)` - read as bytes, a near-white Catppuccin Latte ground came out as `rgb(1, 0, 0)`, a black
+dock under a light scheme. It now paints the colour into a one-pixel canvas and reads sRGB back, and
+its readability limit flips for dark ink: a light scheme's glass is kept light enough for dark labels,
+as a dark one's is kept dark enough for light ones. Panel and overlay
 opacity stay separate too, for the reason the material note gives: a widget panel frosts its own
 wallpaper and a shell panel cannot, so the same number does not describe the same material. The
 dock's fill *is* synced, because a dock sits over the wallpaper exactly as a module panel does —
@@ -865,7 +1273,7 @@ npm run link       # register them, and the theme, with the running Seelen
 npm run reload     # build + force the running widgets to restart (use this while iterating)
 npm run status     # print what each running replica last reported
 npm run check      # svelte-check
-npm test           # the shell-sync state machine, in Node
+npm test           # the shell-sync state machine, the assistant, voice, and the modules' pure logic
 npm run voice:install   # the assistant's local voice: Kokoro, English and German (~4 GB)
 npm run release    # the installer: release/SeelenDesktopSurface-Setup-<version>.exe (+ .sha256)
 npm run unlink     # remove them again
@@ -945,13 +1353,28 @@ before packaging.**
 ```
 src/lib/          host access: seelen, monitors, geometry, persistence, stores, module registry,
                   and appearance.ts, which turns the look settings into the custom properties
-                  every stylesheet reads (and reads the active theme's, when told to)
+                  every stylesheet reads (and reads the active theme's, when told to); the
+                  shared parts of the larger modules - synced.svelte.ts and merge.ts (files both
+                  displays edit), lease.svelte.ts (which display acts), layout.ts, charts.ts,
+                  sound.ts - and each module's pure logic beside its store
 src/desktop/      the @ralfm/desktop widget
 src/palette/      the @ralfm/palette widget
+src/overlay/      the @ralfm/overlay widget - a widget of its own so its hotkey is
+                  unmistakable, which is the one thing a second shortcut cannot be
 src/modules/      one folder per module, plus the shared chrome (panel, menus, dialogs)
                   and ModuleView.svelte, which says which component a panel kind holds.
                   A module that needs a menu or a dialog of its own opens it through
-                  src/lib/overlay.svelte.ts, which the surface renders (see below)
+                  src/lib/overlay.svelte.ts, which the surface renders (see below).
+                  gamemode/ is the exception: not a panel but a whole-display mode the
+                  surface renders instead of its icons and panels, backed by
+                  lib/gamemode.svelte.ts (the mode), gamepad.ts + gamepad.svelte.ts
+                  (what a controller is, and reading one), navgrid.ts (which control a
+                  direction means), gamerows.ts (one tile per game, and which row it
+                  is in), blurb.ts + blurbs.svelte.ts (the descriptions a model writes),
+                  iconsize.ts (why no icon is drawn bigger than it is), hotkeys.ts
+                  (telling two of this widget's own shortcuts apart) and padkeys.ts +
+                  padcontrol.svelte.ts (turning the pad into keys, clicks and a
+                  pointer for the ordinary desktop)
 src/styles/       base.css (shared), fill.css (full-display), fit.css (content-sized popups),
                   modules.css (the `m-` classes every module panel draws itself from)
 widgets/<name>/   metadata.yml + i18n, and the built index.{html,js,css}
@@ -964,9 +1387,12 @@ scripts/          resources.mjs (the one list of what ships), build, link/reload
 
 ## Cost
 
-Measured on this machine with both displays active: **2 renderer processes, 94 MB private /
-177 MB working set** for both desktop replicas — about 47 MB private per display, which is close to
-WebView2's own floor. The palette is lazy and adds nothing until it is opened.
+Measured on this machine with both displays active, before the larger modules were added:
+**2 renderer processes, 94 MB private / 177 MB working set** for both desktop replicas — about 47 MB
+private per display, which is close to WebView2's own floor. The palette and the game overlay are
+both lazy and add nothing until they are opened. A module that is off still costs nothing at all, so that figure holds for the
+default set; each larger module switched on adds its own panel and, where the table in
+[The larger modules](#the-larger-modules) says so, its own file or request.
 
 What keeps it there:
 
@@ -981,8 +1407,46 @@ What keeps it there:
   goes away, so the fifteen modules that are off by default hold no subscriptions, no listeners
   and no copies of host state. The game library is the same bargain one level down: it holds the
   installed-application index only for the length of a scan, not for as long as the panel is open.
-- One bundle per widget, no component libraries: 254 KB / 83 KB gzipped for the desktop with all
-  nineteen modules compiled in.
+- **Media and system metrics are held by their panels too.** They used to start for every display at
+  launch, so a playing track's timeline events and the metrics stream kept both replicas busy for
+  panels nobody had switched on. The Media, System and Performance panels and the palette now hold
+  them, reference-counted like everything in `live.svelte.ts`.
+- One bundle per widget, no component libraries: 613 KB / 204 KB gzipped for the desktop with all
+  thirty-two modules compiled in.
+
+### What made it lag, and what changed
+
+Reproduced in the offline preview or read off the code path, not guessed at:
+
+- **A settings change re-rendered every panel on both displays.** The config store answered each
+  `settings-changed` broadcast - and the host sends one for *any* write to the settings file,
+  including this widget's own shell-style sync and glass tint - with a brand-new config object, and
+  every module reads the config. It now assigns only the keys that actually changed, and a slider
+  drag updates one key in place, so a change nobody reads costs nothing.
+- **Dragging the opacity slider decoded the wallpaper on every tick.** The glass tint re-fetched and
+  re-decoded the whole (4K) wallpaper to recompute an average that depends only on the image. The
+  average is now cached per wallpaper and only the cheap composite is redone.
+- **Dragging a panel forced a layout per pointer event.** The drag read `offsetWidth` straight after
+  writing `left`, which forces a synchronous layout - over a blurred panel, several times a frame on
+  a high-rate mouse. Geometry is read once on `pointerdown` and moves are applied once per animation
+  frame. Panels also carry `contain: layout style`, so a ticking clock re-lays-out one box rather
+  than the surface.
+- **The visualiser reallocated its canvas for every waveform message** (reading `clientWidth` and
+  assigning `width` each time), drew frames nobody saw, and ignored the display scale. It now sizes
+  from a `ResizeObserver`, draws once per frame at device resolution, and paints in the theme accent.
+- **Sliders flooded the host.** Brightness is DDC/CI, tens of milliseconds a request, and every step
+  of a drag was its own command - the thumb stuttered and jumped back as stale levels replayed.
+  Volume and brightness now send only the newest level, one at a time (`coalesced` in
+  `live.svelte.ts`).
+- **The first frame waited on everything.** Panels were held back until the assistant's
+  conversation file, icon packs, the wallpaper library and both window watchers had answered. They
+  now draw as soon as the config and the layout are loaded; the rest fills in behind.
+
+Bugs fixed along the way: the Timer's Pause reset it to the full length (its "follow the setting"
+effect also tracked `running`, so pausing re-ran it); the audio mixer labelled apps with their whole
+executable path (a path-splitting regex had lost a backslash); renaming a workspace by double-click
+saved "Desktop 2" as a literal name; and the Recycle bin's and the Power panel's confirmations stayed
+armed indefinitely, one idle click from emptying the bin or shutting down.
 
 ## Notes learned from the running host
 
@@ -1180,6 +1644,26 @@ Verified against the installed Seelen rather than assumed — these are the non-
 
 - **No GPU metric.** The system monitor ships CPU, memory, disks, network and battery only.
 - **No media seek.** Transport is previous/play-pause/next, so the progress bar is display-only.
+- **No way to synthesise input.** There is no command that types a key or moves the system cursor:
+  the surface is `Run`, `OpenFile`, `RequestFocus` and a long list of readers, and `SendInput` is not
+  among them — nor can a webview make the call itself. That is the whole boundary on
+  [Game mode](#game-mode)'s controller support: a pad can drive *this* surface, because a webview may
+  dispatch events into its own document, and it cannot drive a game or any other window. Reaching
+  those would mean a native helper running beside Seelen, which this package deliberately does not
+  ship.
+- **A gamepad is only readable while the window has focus.** Chromium's rule, not the host's:
+  `navigator.getGamepads()` returns nothing for an unfocused document. A Desktop-preset widget is
+  never focused by a click, so game mode has to ask for the keyboard to read a controller at all, and
+  a controller cannot summon it back while a game holds the foreground. The
+  [game overlay](#game-mode) is the answer to that as far as one exists: a global shortcut is the
+  host's and lands wherever you are, and the `Overlay`-preset widget it opens does hold the keyboard.
+- **A shortcut cannot say which shortcut it was.** A widget declares its own shortcuts in
+  `metadata.yml` and the user rebinds them in Seelen's settings, but what a shortcut *runs* is a CLI
+  command, and `slu widget trigger <id>` takes no arguments — no shortcut id, no flags. Two shortcuts
+  declared by one widget therefore arrive identically. Two *widgets* never do, which is why the game
+  overlay is a resource of its own; where they must share a widget, `get_key_state` is asked which
+  combination is still held, and an unclear answer falls back rather than guessing. See
+  [Game mode](#game-mode).
 - **Windows' "Show desktop" buries a Desktop-preset widget, and the host pins it there.** Clicking
   the taskbar's Show desktop button (or Win+D) focuses Explorer's `Progman` and raises it over
   Seelen's desktop-layer widgets, hiding this surface behind the stock wallpaper. Measured by walking

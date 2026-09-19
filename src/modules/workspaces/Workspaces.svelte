@@ -80,7 +80,8 @@
               aria-current={entry.active ? 'true' : undefined}
               title="Switch to {name}"
               onclick={() => switchWorkspace(entry.workspace.id)}
-              ondblclick={() => cfg.workspacesShowControls && startRename(entry.workspace.id, name)}
+              ondblclick={() =>
+                cfg.workspacesShowControls && startRename(entry.workspace.id, entry.workspace.name ?? '')}
             >
               <span class="m-glyph">{entry.index}</span>
               <span class="m-text"><span class="m-title">{name}</span></span>
@@ -146,7 +147,7 @@
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 12px;
+    font-size: calc(12px * var(--text-scale, 1));
     text-align: left;
     cursor: pointer;
   }

@@ -4,9 +4,11 @@
 
   interface Props {
     source: string;
+    /** Takes a link instead of the default browser - the Browser module's reader keeps it in the panel. */
+    onlink?: (href: string) => void;
   }
 
-  let { source }: Props = $props();
+  let { source, onlink }: Props = $props();
 
   /** Tokens, not HTML: see `markdown.ts` for why nothing here is `{@html}`. */
   const blocks = $derived(parseMarkdown(source));
@@ -26,10 +28,11 @@
     }
   }
 
-  /** Links open in the default browser, never inside the widget. */
+  /** Links open in the default browser, never inside the widget, unless `onlink` takes them. */
   function follow(event: MouseEvent, href: string): void {
     event.preventDefault();
-    void launch(href, 'url');
+    if (onlink) onlink(href);
+    else void launch(href, 'url');
   }
 </script>
 
@@ -114,15 +117,15 @@
   }
 
   code {
-    font-family: 'Cascadia Code', Consolas, ui-monospace, monospace;
+    font-family: var(--mono-font, 'Cascadia Code', Consolas, ui-monospace, monospace);
     font-size: 0.92em;
     padding: 0 3px;
-    border-radius: 4px;
+    border-radius: calc(4px * var(--round, 1));
     background: color-mix(in oklab, var(--color-gray-100, #333) 55%, transparent);
   }
 
   .code {
-    border-radius: 7px;
+    border-radius: calc(7px * var(--round, 1));
     overflow: hidden;
     background: color-mix(in oklab, var(--color-gray-100, #222) 65%, transparent);
   }
@@ -132,12 +135,12 @@
     justify-content: space-between;
     align-items: center;
     padding: 2px 7px;
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
   }
 
   .code-bar button {
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--text-scale, 1));
     color: var(--panel-fg-muted);
     cursor: pointer;
     padding: 0;
@@ -151,7 +154,7 @@
     margin: 0;
     padding: 2px 8px 7px;
     overflow-x: auto;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
     line-height: 1.45;
   }
 
@@ -174,7 +177,7 @@
 
   table {
     border-collapse: collapse;
-    font-size: 11px;
+    font-size: calc(11px * var(--text-scale, 1));
   }
 
   th,

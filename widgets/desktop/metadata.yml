@@ -31,6 +31,18 @@ shortcuts:
     label: Show the desktop
     defaultKeys: ["Win", "Shift", "D"]
 
+  # Both of these run the same CLI command, because `widget trigger` is the only
+  # one that reaches a widget and it takes no arguments. Which of them fired is
+  # worked out from which key is still down when the trigger lands - see
+  # `src/lib/hotkeys.ts`, which says plainly what happens when that is unclear.
+  - id: game-mode
+    command: ["widget", "trigger", "@ralfm/desktop"]
+    label: Open game mode
+    description: >-
+      Turns the chosen display's desktop into the console launcher, and turns it
+      back. Rebind it here; there is nothing to set in the widget for it.
+    defaultKeys: ["Win", "Shift", "G"]
+
 settings:
   - group:
       label: Layout
@@ -95,6 +107,12 @@ settings:
           description: The clock, the timer and panel titles only. Leave empty to use the interface font.
           defaultValue: ""
           allowSetByMonitor: true
+        - type: font
+          key: monoFont
+          label: Monospace font
+          description: Code in the assistant, game paths and other fixed-pitch text. Leave empty for Cascadia Code or Consolas.
+          defaultValue: ""
+          allowSetByMonitor: true
         - type: range
           key: fontSize
           label: Base text size
@@ -102,6 +120,38 @@ settings:
           max: 18
           step: 1
           defaultValue: 14
+          allowSetByMonitor: true
+        - type: range
+          key: fontWeight
+          label: Text weight
+          min: 300
+          max: 700
+          step: 100
+          defaultValue: 400
+          allowSetByMonitor: true
+        - type: range
+          key: displayWeight
+          label: Big number weight
+          description: The clock, the timer and every other large figure. 100 is hairline, 900 is black.
+          min: 100
+          max: 900
+          step: 100
+          defaultValue: 200
+          allowSetByMonitor: true
+        - type: range
+          key: letterSpacing
+          label: Letter spacing
+          description: In hundredths of the text size.
+          min: -4
+          max: 12
+          step: 1
+          defaultValue: 0
+          allowSetByMonitor: true
+        - type: switch
+          key: textShadow
+          label: Text shadow
+          description: A soft shadow under all panel text, for clear or very transparent panels.
+          defaultValue: false
           allowSetByMonitor: true
         - type: select
           key: titleStyle
@@ -111,21 +161,179 @@ settings:
               value: caps
             - label: Plain
               value: plain
+            - label: Lowercase
+              value: lower
             - label: Hidden
               value: hidden
           defaultValue: caps
           allowSetByMonitor: true
+        - type: select
+          key: titleDecor
+          label: Title decoration
+          options:
+            - label: None
+              value: none
+            - label: Brackets
+              value: bracket
+            - label: Underline
+              value: underline
+            - label: Tab
+              value: tab
+            - label: Title bar
+              value: bar
+            - label: Accent dot
+              value: dot
+          defaultValue: none
+          allowSetByMonitor: true
+        - type: select
+          key: titleAlign
+          label: Title alignment
+          options:
+            - label: Left
+              value: left
+            - label: Centre
+              value: center
+            - label: Right
+              value: right
+          defaultValue: left
+          allowSetByMonitor: true
+        - type: range
+          key: titleWeight
+          label: Title weight
+          min: 300
+          max: 900
+          step: 100
+          defaultValue: 600
+          allowSetByMonitor: true
+
   - group:
-      label: Appearance
+      label: Colour
+      description: >-
+        A colour scheme recolours every panel, menu and module at once, the way
+        a base16 theme recolours a Linux desktop. Follow Seelen theme leaves
+        colour to the active theme's preset. Right-click the desktop for Look
+        and Colour scheme menus that switch in one click.
       items:
+        - type: select
+          key: colorScheme
+          label: Colour scheme
+          options:
+            - label: Follow Seelen theme
+              value: theme
+            - label: Custom colours
+              value: custom
+            - label: Catppuccin Mocha
+              value: catppuccin-mocha
+            - label: Catppuccin Latte
+              value: catppuccin-latte
+            - label: Nord
+              value: nord
+            - label: Gruvbox Dark
+              value: gruvbox-dark
+            - label: Gruvbox Light
+              value: gruvbox-light
+            - label: Dracula
+              value: dracula
+            - label: Tokyo Night
+              value: tokyo-night
+            - label: Rosé Pine
+              value: rose-pine
+            - label: Rosé Pine Dawn
+              value: rose-pine-dawn
+            - label: Everforest
+              value: everforest
+            - label: Kanagawa
+              value: kanagawa
+            - label: One Dark
+              value: one-dark
+            - label: Solarized Dark
+              value: solarized-dark
+            - label: Solarized Light
+              value: solarized-light
+            - label: Monokai
+              value: monokai
+            - label: "Synthwave '84"
+              value: synthwave
+            - label: Catppuccin Frappé
+              value: catppuccin-frappe
+            - label: Catppuccin Macchiato
+              value: catppuccin-macchiato
+            - label: Rosé Pine Moon
+              value: rose-pine-moon
+            - label: Gruvbox Material
+              value: gruvbox-material
+            - label: Everforest Light
+              value: everforest-light
+            - label: Tokyo Night Day
+              value: tokyo-day
+            - label: GitHub Dark
+              value: github-dark
+            - label: GitHub Light
+              value: github-light
+            - label: Ayu Dark
+              value: ayu-dark
+            - label: Ayu Mirage
+              value: ayu-mirage
+            - label: Ayu Light
+              value: ayu-light
+            - label: Night Owl
+              value: night-owl
+            - label: Palenight
+              value: palenight
+            - label: Oxocarbon
+              value: oxocarbon
+            - label: Horizon
+              value: horizon
+            - label: Nightfox
+              value: nightfox
+            - label: Moonlight
+              value: moonlight
+            - label: Poimandres
+              value: poimandres
+            - label: Cobalt2
+              value: cobalt2
+            - label: Vesper
+              value: vesper
+          defaultValue: theme
+          allowSetByMonitor: true
         - type: switch
           key: followTheme
           label: Follow the active theme
           description: >-
             Takes the panel colour and accent from the Seelen theme you have
             enabled, so a theme preset restyles the surface along with the rest
-            of the shell. Turn off to use the tint and accent below instead.
+            of the shell. Only while the colour scheme is Follow Seelen theme;
+            turn off to use the tint and accent below instead.
           defaultValue: true
+        - type: switch
+          key: schemeAccent
+          label: Use the scheme's accents
+          description: Off, the two accent colours below are used with any scheme.
+          defaultValue: true
+          allowSetByMonitor: true
+        - type: color
+          key: schemeGround
+          label: Custom ground
+          description: The panel colour a Custom colours scheme is mixed from.
+          defaultValue: "#1e1e2e"
+          allowSetByMonitor: true
+        - type: color
+          key: schemeInk
+          label: Custom ink
+          description: The text colour a Custom colours scheme is mixed from.
+          defaultValue: "#cdd6f4"
+          allowSetByMonitor: true
+        - type: color
+          key: accentColor
+          label: Accent colour
+          description: Used when neither the theme nor a scheme is providing one.
+          defaultValue: "#7aa2f7"
+        - type: color
+          key: accentColor2
+          label: Second accent
+          description: The far end of gradient edges and gradient meters.
+          defaultValue: "#bb9af7"
+          allowSetByMonitor: true
         - type: range
           key: surfaceHue
           label: Panel tint hue
@@ -138,12 +346,16 @@ settings:
         - type: range
           key: surfaceChroma
           label: Panel tint strength
-          description: Zero leaves the panel neutral. Applied on top of the theme's own tint.
+          description: Zero leaves the panel neutral. Applied on top of the theme's or the scheme's own colour.
           min: 0
           max: 20
           step: 1
           defaultValue: 0
           allowSetByMonitor: true
+
+  - group:
+      label: Panels
+      items:
         - type: range
           key: panelOpacity
           label: Panel opacity
@@ -161,12 +373,109 @@ settings:
           defaultValue: 20
           allowSetByMonitor: true
         - type: range
+          key: backdropSaturation
+          label: Backdrop saturation
+          description: Above 100 makes the wallpaper behind the glass more vivid, the way a compositor's vibrancy setting does.
+          min: 0
+          max: 250
+          step: 5
+          defaultValue: 100
+          allowSetByMonitor: true
+        - type: switch
+          key: panelTexture
+          label: Frosted texture
+          description: >-
+            The sheen and grain that make a translucent panel read as glass
+            rather than as tint. Sent to the shell theme too, where it matters
+            more - a dock cannot blur its backdrop, so this is the whole of
+            what makes one look frosted.
+          defaultValue: true
+          allowSetByMonitor: true
+        - type: select
+          key: panelFill
+          label: Panel fill
+          options:
+            - label: Flat
+              value: flat
+            - label: Light from above
+              value: gradient
+            - label: Accent wash
+              value: accent
+          defaultValue: flat
+          allowSetByMonitor: true
+        - type: range
+          key: cornerRadius
+          label: Corner radius
+          min: 0
+          max: 36
+          step: 1
+          defaultValue: 16
+          allowSetByMonitor: true
+        - type: range
+          key: panelPadding
+          label: Inner padding
+          min: 4
+          max: 32
+          step: 1
+          defaultValue: 12
+          allowSetByMonitor: true
+        - type: range
+          key: panelBorderWidth
+          label: Edge width
+          min: 0
+          max: 6
+          step: 0.5
+          defaultValue: 1
+          allowSetByMonitor: true
+        - type: select
+          key: panelBorderStyle
+          label: Edge style
+          options:
+            - label: Solid
+              value: solid
+            - label: Dashed
+              value: dashed
+            - label: Dotted
+              value: dotted
+            - label: Double
+              value: double
+            - label: Groove
+              value: groove
+            - label: Ridge
+              value: ridge
+            - label: Inset
+              value: inset
+            - label: Outset (bevel)
+              value: outset
+          defaultValue: solid
+          allowSetByMonitor: true
+        - type: select
+          key: panelBorderColor
+          label: Edge colour
+          options:
+            - label: Neutral
+              value: neutral
+            - label: Ink
+              value: ink
+            - label: Accent
+              value: accent
+            - label: Gradient
+              value: gradient
+          defaultValue: neutral
+          allowSetByMonitor: true
+        - type: range
           key: panelBorder
           label: Panel edge strength
           min: 0
           max: 100
           step: 1
           defaultValue: 34
+          allowSetByMonitor: true
+        - type: switch
+          key: borderAnimation
+          label: Turn gradient edges
+          description: Slowly rotates a gradient edge round each panel. Paused while windows cover the desktop.
+          defaultValue: false
           allowSetByMonitor: true
         - type: select
           key: panelShadow
@@ -180,25 +489,40 @@ settings:
               value: medium
             - label: Deep
               value: deep
+            - label: Hard offset
+              value: hard
+            - label: Accent block
+              value: block
+            - label: Accent glow
+              value: glow
           defaultValue: soft
           allowSetByMonitor: true
         - type: switch
-          key: panelTexture
-          label: Frosted texture
-          description: >-
-            The sheen and grain that make a translucent panel read as glass
-            rather than as tint. Sent to the shell theme too, where it matters
-            more - a dock cannot blur its backdrop, so this is the whole of
-            what makes one look frosted.
+          key: panelGlow
+          label: Pointer light
+          description: The light that follows the pointer across a panel.
           defaultValue: true
           allowSetByMonitor: true
-        - type: range
-          key: cornerRadius
-          label: Corner radius
-          min: 0
-          max: 36
-          step: 1
-          defaultValue: 16
+
+  - group:
+      label: Controls and icons
+      items:
+        - type: select
+          key: controlShape
+          label: Control shape
+          description: How round every button, field, chip, switch and meter is, independent of the panel corners.
+          options:
+            - label: Square
+              value: square
+            - label: Subtle
+              value: subtle
+            - label: Rounded
+              value: rounded
+            - label: Round
+              value: round
+            - label: Pill
+              value: pill
+          defaultValue: rounded
           allowSetByMonitor: true
         - type: select
           key: density
@@ -214,6 +538,40 @@ settings:
           defaultValue: cosy
           allowSetByMonitor: true
         - type: range
+          key: barThickness
+          label: Meter thickness
+          min: 2
+          max: 14
+          step: 1
+          defaultValue: 4
+          allowSetByMonitor: true
+        - type: select
+          key: barStyle
+          label: Meter style
+          options:
+            - label: Solid
+              value: solid
+            - label: Gradient
+              value: gradient
+            - label: Striped
+              value: striped
+            - label: Glowing
+              value: glow
+          defaultValue: solid
+          allowSetByMonitor: true
+        - type: select
+          key: scrollbars
+          label: Scrollbars
+          options:
+            - label: Thin
+              value: thin
+            - label: Hidden
+              value: hidden
+            - label: Windows default
+              value: auto
+          defaultValue: thin
+          allowSetByMonitor: true
+        - type: range
           key: iconRadius
           label: Icon corner radius
           min: 0
@@ -221,25 +579,88 @@ settings:
           step: 1
           defaultValue: 10
           allowSetByMonitor: true
-        - type: color
-          key: accentColor
-          label: Accent colour
-          description: Used when the surface is not following the theme.
-          defaultValue: "#7aa2f7"
+        - type: select
+          key: iconLabelStyle
+          label: Desktop icon labels
+          options:
+            - label: Shadowed
+              value: shadow
+            - label: On a pill
+              value: pill
+            - label: Plain
+              value: plain
+          defaultValue: shadow
+          allowSetByMonitor: true
+
+  - group:
+      label: Motion
+      items:
         - type: switch
           key: animations
           label: Animations
           defaultValue: true
+        - type: range
+          key: motionScale
+          label: Animation length
+          description: 100 is the tuned pace; 200 takes twice as long. Sent to the shell theme's Animation speed too.
+          min: 25
+          max: 200
+          step: 5
+          defaultValue: 100
+          allowSetByMonitor: true
+        - type: range
+          key: staggerScale
+          label: List stagger
+          description: How far apart the rows of a list arrive. 0 brings a whole list in at once.
+          min: 0
+          max: 300
+          step: 10
+          defaultValue: 100
+          allowSetByMonitor: true
+        - type: select
+          key: entranceStyle
+          label: Panel entrance
+          options:
+            - label: Rise
+              value: rise
+            - label: Fade
+              value: fade
+            - label: Zoom
+              value: zoom
+            - label: Drop
+              value: drop
+            - label: Slide
+              value: slide
+            - label: Into focus
+              value: blur
+            - label: None
+              value: none
+          defaultValue: rise
+          allowSetByMonitor: true
+
+  - group:
+      label: Advanced
+      items:
         - type: switch
           key: styleShell
           label: Apply these to the Seelen shell
           description: >-
-            Mirrors the font, text size, density, corner radius, blur, edge and
-            animation settings above into the "Desktop Surface" theme, so the
-            dock, the start menu and every popup are dressed the same way. Needs
-            that theme enabled. Colour is not sent - that travels the other way,
+            Mirrors the font, text size, density, corner radius, blur, edge,
+            animation length, list stagger and colour scheme settings into the
+            "Desktop Surface" theme, so the dock, the start menu and every popup
+            are dressed the same way. Needs that theme enabled. With the scheme
+            on Follow Seelen theme no colour is sent - it travels the other way,
             from the theme's preset into this surface.
           defaultValue: true
+        - type: text
+          key: customCss
+          label: Custom CSS
+          description: >-
+            A stylesheet of your own, applied after everything else. Easier to
+            edit from the desktop's Appearance dialog (right-click the desktop),
+            which previews as you type and lists every hook and token it can use.
+          defaultValue: ""
+          allowSetByMonitor: true
 
   - group:
       label: Wallpaper
@@ -439,6 +860,66 @@ settings:
         - type: switch
           key: moduleChat
           label: Assistant
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleWeather
+          label: Weather
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleAgenda
+          label: Agenda
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleAlarms
+          label: Alarms, timers and stopwatch
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: modulePerf
+          label: Performance
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleUsage
+          label: Screen time
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleApps
+          label: Apps
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleBoard
+          label: Board
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleHabits
+          label: Habits
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleCalc
+          label: Calculator
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleTray
+          label: Tray
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleLinks
+          label: Links and search
+          defaultValue: false
+          allowSetByMonitor: true
+        - type: switch
+          key: moduleBrowser
+          label: Browser
           defaultValue: false
           allowSetByMonitor: true
 
@@ -1113,6 +1594,375 @@ settings:
           allowSetByMonitor: true
           dependencies: [moduleGames]
 
+  # Game mode turns one display's desktop into a console-style launcher. Its
+  # settings are deliberately *not* allowSetByMonitor: only one display can be
+  # the launcher, so a per-display value would only be a way for two replicas
+  # to disagree about which of them that is.
+  - group:
+      label: Game mode
+      description: >-
+        Turns one display's desktop into a full-screen game launcher driven by a
+        controller. Open it from the desktop's own menu, or from the command
+        palette on Win+Alt+Space.
+      items:
+        - type: text
+          key: gameModeDisplay
+          label: Display
+          description: >-
+            The monitor id to take over; blank uses the primary display. The
+            desktop's Game mode menu lists the displays by name, which is easier
+            than copying an id in here.
+          defaultValue: ""
+        - type: switch
+          key: gameModeAtStart
+          label: Open game mode at start-up
+          description: That display comes up as the launcher rather than as a desktop.
+          defaultValue: false
+        - type: select
+          key: gameModeOnLaunch
+          label: When a game starts
+          options:
+            - label: Leave the launcher open
+              value: stay
+            - label: Go back to the desktop
+              value: leave
+          defaultValue: stay
+        - type: switch
+          key: gameModeKeepFocus
+          label: Keep the keyboard
+          description: >-
+            A controller can only be read while this display holds the keyboard,
+            so letting go turns the pad off.
+          defaultValue: true
+        - type: switch
+          key: gameModeHideCursor
+          label: Hide the mouse pointer
+          defaultValue: true
+        - type: switch
+          key: gameModeAnimate
+          label: Animate
+          defaultValue: true
+
+  - group:
+      label: Game mode - library
+      items:
+        - type: select
+          key: gameModeSort
+          label: Order
+          options:
+            - label: Recently played
+              value: recent
+            - label: Name
+              value: name
+            - label: Most played
+              value: played
+            - label: Store
+              value: launcher
+          defaultValue: recent
+        - type: switch
+          key: gameModeFavouritesFirst
+          label: Favourites first
+          defaultValue: true
+        - type: range
+          key: gameModeRecentCount
+          label: Games on the home row
+          min: 4
+          max: 30
+          step: 1
+          defaultValue: 12
+        - type: switch
+          key: gameModeShowSearch
+          label: Show the search row
+          defaultValue: true
+        - type: switch
+          key: gameModeShowStats
+          label: Show play time
+          defaultValue: true
+        - type: switch
+          key: gameModeShowBlurb
+          label: Show descriptions
+          description: >-
+            The one-line descriptions written by a model. Nothing is shown until
+            you ask for them to be written, in the desktop's Game mode dialog.
+          defaultValue: true
+        - type: switch
+          key: gameModeShowApps
+          label: Show the Apps section
+          description: The desktop icons, as a grid that can be started from the sofa.
+          defaultValue: true
+        - type: switch
+          key: gameModeShowPower
+          label: Show the Power section
+          defaultValue: true
+
+  - group:
+      label: Game mode - look
+      items:
+        - type: select
+          key: gameModeLayout
+          label: Layout
+          options:
+            - label: Shelves - rows that scroll sideways
+              value: shelf
+            - label: Grid - everything at once
+              value: grid
+            - label: Wall - large covers, few of them
+              value: wall
+          defaultValue: shelf
+        - type: range
+          key: gameModeTileSize
+          label: Tile size
+          min: 120
+          max: 400
+          step: 10
+          defaultValue: 200
+        - type: select
+          key: gameModeArtShape
+          label: Tile shape
+          options:
+            - label: Square
+              value: square
+            - label: Portrait
+              value: portrait
+            - label: Wide
+              value: wide
+          defaultValue: square
+        - type: select
+          key: gameModeArtStyle
+          label: On each tile
+          description: >-
+            Every tile is the same surface - the panel material the rest of the
+            desktop is made of - and this is what sits on it.
+          options:
+            - label: The application's icon
+              value: icon
+            - label: A cover image, where there is one
+              value: cover
+            - label: The title only
+              value: plain
+          defaultValue: icon
+        - type: select
+          key: gameModeBackdrop
+          label: Backdrop
+          options:
+            - label: The wallpaper
+              value: wallpaper
+            - label: The selected game's cover, if it has one
+              value: art
+            - label: Plain
+              value: plain
+          defaultValue: wallpaper
+        - type: range
+          key: gameModeBackdropDim
+          label: Backdrop dim
+          min: 0
+          max: 95
+          step: 1
+          defaultValue: 62
+        - type: range
+          key: gameModeBackdropBlur
+          label: Backdrop blur
+          min: 0
+          max: 120
+          step: 2
+          defaultValue: 40
+        - type: switch
+          key: gameModeShowHero
+          label: Show the details panel
+          defaultValue: true
+        - type: switch
+          key: gameModeShowClock
+          label: Show the clock
+          defaultValue: true
+        - type: switch
+          key: gameModeShowLegend
+          label: Show the button hints
+          defaultValue: true
+
+  # A controller is read through the browser's Gamepad API, which only reports
+  # while the surface holds the keyboard - so these settings do nothing at all
+  # until game mode is open, or "drive the desktop" below is switched on.
+  - group:
+      label: Controller
+      description: >-
+        How a gamepad is read. Buttons are named by position - south, east,
+        west, north - so one set of bindings is correct on an Xbox pad, a
+        DualSense and a Switch Pro controller alike.
+      items:
+        - type: switch
+          key: padEnabled
+          label: Read the controller
+          description: Off, game mode still works with the keyboard and the mouse.
+          defaultValue: true
+        - type: select
+          key: padLayout
+          label: Button glyphs
+          options:
+            - label: Detect from the pad
+              value: auto
+            - label: Xbox
+              value: xbox
+            - label: PlayStation
+              value: playstation
+            - label: Nintendo
+              value: nintendo
+            - label: Generic
+              value: generic
+          defaultValue: auto
+        - type: range
+          key: padDeadzone
+          label: Stick dead zone
+          min: 0
+          max: 60
+          step: 1
+          defaultValue: 25
+        - type: range
+          key: padCurve
+          label: Stick response
+          description: 100 is linear; higher gives finer control near the centre.
+          min: 100
+          max: 300
+          step: 5
+          defaultValue: 160
+        - type: switch
+          key: padStickNavigates
+          label: The left stick moves the selection
+          defaultValue: true
+        - type: range
+          key: padStickThreshold
+          label: Stick step point
+          min: 20
+          max: 95
+          step: 1
+          defaultValue: 55
+        - type: range
+          key: padRepeatDelay
+          label: Hold before repeating
+          min: 150
+          max: 900
+          step: 10
+          defaultValue: 420
+        - type: range
+          key: padRepeatInterval
+          label: Repeat every
+          min: 40
+          max: 400
+          step: 5
+          defaultValue: 140
+        - type: range
+          key: padRepeatMin
+          label: Fastest repeat
+          description: A long hold accelerates from the rate above to this one.
+          min: 20
+          max: 300
+          step: 5
+          defaultValue: 60
+        - type: range
+          key: padTriggerThreshold
+          label: Trigger pull
+          min: 5
+          max: 95
+          step: 1
+          defaultValue: 50
+        - type: switch
+          key: padRumble
+          label: Rumble
+          defaultValue: true
+        - type: range
+          key: padRumbleStrength
+          label: Rumble strength
+          min: 0
+          max: 100
+          step: 5
+          defaultValue: 35
+        - type: text
+          key: padBindings
+          label: Button bindings
+          description: >-
+            One action=button per line or separated by commas, for example
+            "confirm=south, back=east". Blank uses the console default.
+          defaultValue: ""
+
+  - group:
+      label: Controller on the desktop
+      description: >-
+        Outside game mode, a controller can drive the surface itself: buttons
+        become keys, clicks and scrolling, and the right stick becomes a
+        pointer. It reaches this desktop only - synthesising input for a game or
+        another application needs a Win32 call the host exposes no command for.
+      items:
+        - type: switch
+          key: padDesktop
+          label: Drive the desktop with the controller
+          defaultValue: false
+        - type: select
+          key: padPreset
+          label: Button profile
+          options:
+            - label: Menu navigation
+              value: navigation
+            - label: Arrow keys
+              value: arrows
+            - label: WASD
+              value: wasd
+            - label: Mouse and scroll
+              value: mouse
+            - label: Custom
+              value: custom
+          defaultValue: navigation
+        - type: text
+          key: padCustomKeys
+          label: Button overrides
+          description: >-
+            Applied over the profile, for example "north=f5, l3=click". A value
+            may be a key, click, rightclick, middleclick, scrollup, scrolldown,
+            or none.
+          defaultValue: ""
+        - type: switch
+          key: padPointer
+          label: The right stick moves a pointer
+          defaultValue: true
+        - type: range
+          key: padPointerSpeed
+          label: Pointer speed
+          min: 200
+          max: 3000
+          step: 50
+          defaultValue: 1100
+        - type: range
+          key: padPointerAccel
+          label: Pointer ramp
+          min: 100
+          max: 400
+          step: 10
+          defaultValue: 190
+        - type: range
+          key: padPointerSize
+          label: Pointer size
+          min: 10
+          max: 60
+          step: 1
+          defaultValue: 22
+        - type: range
+          key: padPointerHide
+          label: Fade the pointer after
+          description: 0 keeps it on screen.
+          min: 0
+          max: 20
+          step: 1
+          defaultValue: 3
+        - type: switch
+          key: padStickScrolls
+          label: The left stick scrolls
+          defaultValue: true
+        - type: range
+          key: padScrollSpeed
+          label: Scroll speed
+          min: 2
+          max: 60
+          step: 1
+          defaultValue: 14
+
   # The API key is deliberately absent from this file. Settings live in
   # Seelen's own settings store, which is shared, exportable and per-monitor
   # patchable; a credential belongs in none of those. The panel asks for it
@@ -1194,3 +2044,461 @@ settings:
           defaultValue: true
           allowSetByMonitor: true
           dependencies: [moduleChat]
+
+  - group:
+      label: Weather
+      description: Forecasts from Open-Meteo, fetched every thirty minutes while the panel is shown.
+      items:
+        - type: text
+          key: weatherPlace
+          label: Place
+          description: A city or town. Searching from the panel itself picks the exact one.
+          defaultValue: ""
+          allowSetByMonitor: true
+          dependencies: [moduleWeather]
+        - type: select
+          key: weatherUnits
+          label: Units
+          options:
+            - label: Metric (°C, km/h)
+              value: metric
+            - label: Imperial (°F, mph)
+              value: imperial
+          defaultValue: metric
+          allowSetByMonitor: true
+          dependencies: [moduleWeather]
+        - type: range
+          key: weatherDays
+          label: Days ahead
+          min: 3
+          max: 14
+          step: 1
+          defaultValue: 7
+          allowSetByMonitor: true
+          dependencies: [moduleWeather]
+        - type: switch
+          key: weatherShowHourly
+          label: Show the next 24 hours
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleWeather]
+        - type: switch
+          key: weatherShowDetails
+          label: Show the details
+          description: Humidity, wind, UV, rain, sunrise and sunset.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleWeather]
+
+  - group:
+      label: Agenda
+      description: Events and reminders, shared by every display.
+      items:
+        - type: range
+          key: agendaDaysAhead
+          label: Look ahead (days)
+          min: 1
+          max: 60
+          step: 1
+          defaultValue: 14
+          allowSetByMonitor: true
+          dependencies: [moduleAgenda]
+        - type: switch
+          key: agendaShowWeek
+          label: Show the week strip
+          description: Seven days across the top, with a dot on each day something is on.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleAgenda]
+        - type: switch
+          key: agendaReminders
+          label: Ring reminders
+          description: While an Agenda panel is on any display. Only one display rings, however many show it.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleAgenda]
+        - type: select
+          key: agendaDefaultRemind
+          label: Default reminder
+          options:
+            - label: None
+              value: none
+            - label: At the start
+              value: "0"
+            - label: 5 minutes before
+              value: "5"
+            - label: 10 minutes before
+              value: "10"
+            - label: 15 minutes before
+              value: "15"
+            - label: 30 minutes before
+              value: "30"
+            - label: 1 hour before
+              value: "60"
+          defaultValue: "10"
+          allowSetByMonitor: true
+          dependencies: [moduleAgenda]
+        - type: switch
+          key: agendaMonthFirst
+          label: Read 3/10 as 10 March
+          description: For dates typed with a slash. Dates with dots are always day first.
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleAgenda]
+
+  - group:
+      label: Alarms
+      items:
+        - type: select
+          key: alarmsDefaultTab
+          label: Opens on
+          options:
+            - label: Timers
+              value: timers
+            - label: Stopwatch
+              value: stopwatch
+            - label: Alarms
+              value: alarms
+          defaultValue: timers
+          allowSetByMonitor: true
+          dependencies: [moduleAlarms]
+        - type: range
+          key: alarmsRings
+          label: Rings
+          description: How many times a finished timer or an alarm chimes before it goes quiet.
+          min: 1
+          max: 20
+          step: 1
+          defaultValue: 6
+          allowSetByMonitor: true
+          dependencies: [moduleAlarms]
+        - type: range
+          key: alarmsVolume
+          label: Volume
+          min: 5
+          max: 100
+          step: 5
+          defaultValue: 60
+          allowSetByMonitor: true
+          dependencies: [moduleAlarms]
+        - type: switch
+          key: alarms24h
+          label: 24-hour time
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleAlarms]
+
+  - group:
+      label: Performance
+      items:
+        - type: select
+          key: perfDefaultTab
+          label: Opens on
+          options:
+            - label: CPU
+              value: cpu
+            - label: Memory
+              value: memory
+            - label: Disk
+              value: disk
+            - label: Network
+              value: network
+          defaultValue: cpu
+          allowSetByMonitor: true
+          dependencies: [modulePerf]
+        - type: switch
+          key: perfShowCores
+          label: Show every core
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [modulePerf]
+        - type: switch
+          key: perfFillGraph
+          label: Fill under the graph
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [modulePerf]
+        - type: switch
+          key: perfShowGrid
+          label: Show guide lines
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [modulePerf]
+
+  - group:
+      label: Screen time
+      description: Counted from the foreground window while the panel is on some display, by one display only.
+      items:
+        - type: range
+          key: usageIdleMinutes
+          label: Away after (minutes)
+          description: No pointer movement and no change of window for this long stops the count. A fullscreen window never counts as away.
+          min: 1
+          max: 30
+          step: 1
+          defaultValue: 5
+          allowSetByMonitor: true
+          dependencies: [moduleUsage]
+        - type: switch
+          key: usageShowWeek
+          label: Show the week
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleUsage]
+        - type: range
+          key: usageMax
+          label: Apps to list
+          min: 3
+          max: 25
+          step: 1
+          defaultValue: 8
+          allowSetByMonitor: true
+          dependencies: [moduleUsage]
+        - type: text
+          key: usageIgnore
+          label: Never count
+          description: Application names separated by commas.
+          defaultValue: ""
+          allowSetByMonitor: true
+          dependencies: [moduleUsage]
+
+  - group:
+      label: Apps
+      items:
+        - type: select
+          key: appsView
+          label: View
+          options:
+            - label: List
+              value: list
+            - label: Tiles
+              value: grid
+          defaultValue: list
+          allowSetByMonitor: true
+          dependencies: [moduleApps]
+        - type: range
+          key: appsTileSize
+          label: Tile size
+          description: Tiles view only.
+          min: 32
+          max: 96
+          step: 4
+          defaultValue: 48
+          allowSetByMonitor: true
+          dependencies: [moduleApps]
+        - type: switch
+          key: appsShowFavourites
+          label: Show favourites
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleApps]
+        - type: switch
+          key: appsShowRecent
+          label: Show recently opened
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleApps]
+        - type: switch
+          key: appsShowAll
+          label: List every app
+          description: Otherwise the full list only appears while searching.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleApps]
+
+  - group:
+      label: Board
+      items:
+        - type: range
+          key: boardColumnWidth
+          label: Column width
+          min: 140
+          max: 360
+          step: 10
+          defaultValue: 200
+          allowSetByMonitor: true
+          dependencies: [moduleBoard]
+        - type: switch
+          key: boardShowDue
+          label: Show due dates
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleBoard]
+        - type: switch
+          key: boardShowNotes
+          label: Show the first line of notes
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleBoard]
+        - type: switch
+          key: boardCompact
+          label: Compact cards
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleBoard]
+
+  - group:
+      label: Habits
+      items:
+        - type: range
+          key: habitsDays
+          label: Days shown
+          min: 5
+          max: 14
+          step: 1
+          defaultValue: 7
+          allowSetByMonitor: true
+          dependencies: [moduleHabits]
+        - type: switch
+          key: habitsShowStreak
+          label: Show streaks
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleHabits]
+        - type: switch
+          key: habitsShowHeatmap
+          label: Show the history
+          description: Sixteen weeks for the habit you select.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleHabits]
+
+  - group:
+      label: Calculator
+      items:
+        - type: switch
+          key: calcShowKeypad
+          label: Show the keypad
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleCalc]
+        - type: select
+          key: calcAngle
+          label: Angles
+          options:
+            - label: Degrees
+              value: deg
+            - label: Radians
+              value: rad
+          defaultValue: deg
+          allowSetByMonitor: true
+          dependencies: [moduleCalc]
+        - type: range
+          key: calcPrecision
+          label: Significant digits
+          min: 4
+          max: 16
+          step: 1
+          defaultValue: 10
+          allowSetByMonitor: true
+          dependencies: [moduleCalc]
+        - type: switch
+          key: calcGrouping
+          label: Group thousands
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleCalc]
+
+  - group:
+      label: Tray
+      items:
+        - type: range
+          key: trayIconSize
+          label: Icon size
+          min: 16
+          max: 40
+          step: 2
+          defaultValue: 24
+          allowSetByMonitor: true
+          dependencies: [moduleTray]
+        - type: switch
+          key: trayShowLabels
+          label: List with names
+          description: Each icon beside its tooltip, instead of a grid of icons.
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleTray]
+        - type: switch
+          key: trayShowHidden
+          label: Include hidden icons
+          description: The ones Windows keeps behind the overflow arrow.
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleTray]
+
+  - group:
+      label: Links
+      items:
+        - type: select
+          key: linksEngine
+          label: Search with
+          description: "Bangs pick another for one search: !g, !ddg, !yt, !gh, !w, !maps."
+          options:
+            - label: Google
+              value: google
+            - label: DuckDuckGo
+              value: duckduckgo
+            - label: Bing
+              value: bing
+            - label: Brave
+              value: brave
+            - label: Startpage
+              value: startpage
+            - label: Ecosia
+              value: ecosia
+            - label: Kagi
+              value: kagi
+          defaultValue: google
+          allowSetByMonitor: true
+          dependencies: [moduleLinks]
+        - type: switch
+          key: linksShowSearch
+          label: Show the search box
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleLinks]
+        - type: switch
+          key: linksShowLabels
+          label: Show names
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleLinks]
+        - type: range
+          key: linksTileSize
+          label: Tile size
+          min: 32
+          max: 96
+          step: 4
+          defaultValue: 44
+          allowSetByMonitor: true
+          dependencies: [moduleLinks]
+
+  - group:
+      label: Browser
+      description: >-
+        A page in a panel. A site that refuses to be shown inside another page is
+        shown as a copy rendered by r.jina.ai - its look, without its scripts - or
+        opens in a window of its own.
+      items:
+        - type: switch
+          key: browserReader
+          label: Open pages as text
+          description: Every page as plain text, read through r.jina.ai.
+          defaultValue: false
+          allowSetByMonitor: true
+          dependencies: [moduleBrowser]
+        - type: switch
+          key: browserShowNav
+          label: Show back and forward
+          defaultValue: true
+          allowSetByMonitor: true
+          dependencies: [moduleBrowser]
+        - type: range
+          key: browserZoom
+          label: Page zoom
+          min: 50
+          max: 150
+          step: 10
+          defaultValue: 100
+          allowSetByMonitor: true
+          dependencies: [moduleBrowser]
